@@ -6,17 +6,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "@/shared/components/ui/table";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/shared/components/ui/select";
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
+import { LoadingSpinner } from "@/shared/components/feedback";
 
 interface Column {
   key: string;
@@ -66,7 +67,7 @@ export default function DataTable({
     return (
       <div className="surface rounded-xl border border-border">
         <div className="p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <LoadingSpinner size="lg" className="mx-auto" />
           <p className="mt-2 text-muted-foreground">Loading...</p>
         </div>
       </div>

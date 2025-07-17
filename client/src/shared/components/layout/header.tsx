@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
 import { Menu, Search, Bell, Settings } from "lucide-react";
 
 interface HeaderProps {

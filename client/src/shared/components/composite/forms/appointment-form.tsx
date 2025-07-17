@@ -1,34 +1,35 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertTaskSchema, type Task, type InsertTask } from "@shared/schema";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form";
+import { insertAppointmentSchema, type Appointment, type InsertAppointment } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
-const formSchema = insertTaskSchema.extend({
+const formSchema = insertAppointmentSchema.extend({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  assignedToId: z.coerce.number().optional(),
-  createdById: z.coerce.number().optional(),
+  scheduledAt: z.string().min(1, "Scheduled date and time is required"),
+  duration: z.coerce.number().min(1, "Duration must be at least 1 minute"),
+  userId: z.coerce.number().optional(),
   leadId: z.coerce.number().optional(),
   contactId: z.coerce.number().optional(),
-  dueDate: z.string().optional(),
+  meetingLink: z.string().optional(),
 });
 
-interface TaskFormProps {
-  task?: Task | null;
+interface AppointmentFormProps {
+  appointment?: Appointment | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
+export default function AppointmentForm({ appointment, onSuccess, onCancel }: AppointmentFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -47,15 +48,15 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      priority: task?.priority || "Medium",
-      status: task?.status || "Pending",
-      assignedToId: task?.assignedToId || undefined,
-      createdById: task?.createdById || 1, // Default to current user
-      leadId: task?.leadId || undefined,
-      contactId: task?.contactId || undefined,
-      dueDate: task?.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : "",
+      title: appointment?.title || "",
+      description: appointment?.description || "",
+      scheduledAt: appointment?.scheduledAt ? new Date(appointment.scheduledAt).toISOString().slice(0, 16) : "",
+      duration: appointment?.duration || 30,
+      status: appointment?.status || "Scheduled",
+      userId: appointment?.userId || undefined,
+      leadId: appointment?.leadId || undefined,
+      contactId: appointment?.contactId || undefined,
+      meetingLink: appointment?.meetingLink || "",
     },
   });
 
@@ -63,18 +64,18 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
     mutationFn: async (data: z.infer<typeof formSchema>) => {
       const payload = {
         ...data,
-        dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+        scheduledAt: new Date(data.scheduledAt).toISOString(),
       };
-      const url = task ? `/api/tasks/${task.id}` : "/api/tasks";
-      const method = task ? "PUT" : "POST";
+      const url = appointment ? `/api/appointments/${appointment.id}` : "/api/appointments";
+      const method = appointment ? "PUT" : "POST";
       return await apiRequest(method, url, payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/appointments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({
         title: "Success",
-        description: `Task ${task ? "updated" : "created"} successfully`,
+        description: `Appointment ${appointment ? "updated" : "scheduled"} successfully`,
       });
       onSuccess();
     },
@@ -101,7 +102,7 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Task title..." {...field} />
+                <Input placeholder="Initial Consultation" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -115,7 +116,7 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="Task description..." {...field} />
+                <Textarea placeholder="Appointment description..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -125,27 +126,34 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="priority"
+            name="scheduledAt"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Priority</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select priority" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormLabel>Date & Time</FormLabel>
+                <FormControl>
+                  <Input type="datetime-local" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="duration"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Duration (minutes)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="30" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="status"
@@ -159,53 +167,39 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                    <SelectItem value="Confirmed">Confirmed</SelectItem>
                     <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    <SelectItem value="No Show">No Show</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
 
-        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="assignedToId"
+            name="userId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Assigned To</FormLabel>
+                <FormLabel>Provider</FormLabel>
                 <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} defaultValue={field.value?.toString()}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select assignee" />
+                      <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectItem value="no-provider">No provider</SelectItem>
                     {Array.isArray(users) && users.map((user: any) => (
                       <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.firstName} {user.lastName}
+                        {user.firstName} {user.lastName} ({user.role})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="dueDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Due Date</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -266,12 +260,26 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
           />
         </div>
 
+        <FormField
+          control={form.control}
+          name="meetingLink"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Meeting Link</FormLabel>
+              <FormControl>
+                <Input placeholder="https://meet.google.com/..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="flex justify-end space-x-2">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : (task ? "Update" : "Create")}
+            {mutation.isPending ? "Saving..." : (appointment ? "Update" : "Schedule")}
           </Button>
         </div>
       </form>

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import StatsCard from "@/components/stats-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import StatsCard from "@/shared/components/data-display/stats-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
 import { UserPlus, Users, CheckSquare, Calendar, Activity } from "lucide-react";
 import type { DashboardStats } from "@/lib/types";
 

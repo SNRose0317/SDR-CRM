@@ -1,9 +1,9 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import MainLayout from "@/components/layout/main-layout";
+import { Toaster } from "@/shared/components/ui/toaster";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import MainLayout from "@/shared/components/layout/main-layout";
 import Dashboard from "@/pages/dashboard";
 import Leads from "@/pages/leads";
 import Contacts from "@/pages/contacts";
