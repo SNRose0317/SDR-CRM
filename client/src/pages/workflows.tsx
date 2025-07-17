@@ -1,25 +1,31 @@
 import React, { useState } from 'react';
 import { WorkflowBuilder } from '@/components/workflow-builder/WorkflowBuilder';
-import { BusinessNodePalette } from '@/components/workflow-builder/BusinessNodePalette';
-import { BusinessWorkflowCanvas } from '@/components/workflow-builder/BusinessWorkflowCanvas';
 import { WorkflowDefinition } from '@/components/workflow-builder/types';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Badge } from '@/shared/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 const WorkflowsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'builder' | 'list'>('builder');
   const [currentWorkflow, setCurrentWorkflow] = useState<WorkflowDefinition | undefined>();
+  const [userRole, setUserRole] = useState<string>('sdr');
   const { toast } = useToast();
 
-  // Mock existing workflows
+  const roleOptions = [
+    { value: 'sdr', label: 'SDR Manager', description: 'Manage lead assignments and follow-ups' },
+    { value: 'health_coach', label: 'Health Coach Manager', description: 'Manage patient journey and care' },
+    { value: 'admin', label: 'System Admin', description: 'Full system automation control' }
+  ];
+
+  // Business-friendly workflow templates
   const existingWorkflows: WorkflowDefinition[] = [
     {
       id: 'portal-signup-workflow',
-      name: 'Portal Signup to Lead',
-      description: 'Automatically convert portal signups to leads and assign to SDR',
+      name: 'Portal Signup → Lead Assignment',
+      description: 'When someone signs up through portal, create lead and assign to next available SDR',
       version: '1.0.0',
       isActive: true,
       nodes: [],
@@ -31,8 +37,8 @@ const WorkflowsPage: React.FC = () => {
     },
     {
       id: 'lead-nurturing-workflow',
-      name: 'Lead Nurturing Sequence',
-      description: 'Automated follow-up sequence for new leads',
+      name: 'New Lead → Follow-up Tasks',
+      description: 'When new lead is created, automatically create follow-up tasks and notify team',
       version: '1.0.0',
       isActive: false,
       nodes: [],
@@ -40,6 +46,19 @@ const WorkflowsPage: React.FC = () => {
       variables: [],
       createdAt: new Date('2024-01-10'),
       updatedAt: new Date('2024-01-15'),
+      createdBy: 'admin',
+    },
+    {
+      id: 'status-change-workflow',
+      name: 'Status Change → Team Notification',
+      description: 'When lead status changes to HHQ Signed, notify health coach and create booking task',
+      version: '1.0.0',
+      isActive: true,
+      nodes: [],
+      edges: [],
+      variables: [],
+      createdAt: new Date('2024-01-12'),
+      updatedAt: new Date('2024-01-18'),
       createdBy: 'admin',
     },
   ];
@@ -85,14 +104,29 @@ const WorkflowsPage: React.FC = () => {
           <div className="flex items-center justify-between px-6 py-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Workflow Automation
+                Business Workflow Builder
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Create and manage automated workflows for your CRM processes
+                Create automated workflows using business-friendly language and concepts
               </p>
             </div>
             
             <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Your Role:</span>
+                <Select value={userRole} onValueChange={setUserRole}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <TabsList>
                 <TabsTrigger value="builder">Builder</TabsTrigger>
                 <TabsTrigger value="list">Workflows</TabsTrigger>
@@ -113,6 +147,7 @@ const WorkflowsPage: React.FC = () => {
             onSave={handleSaveWorkflow}
             onTest={handleTestWorkflow}
             onDeploy={handleDeployWorkflow}
+            userRole={userRole}
           />
         </TabsContent>
 

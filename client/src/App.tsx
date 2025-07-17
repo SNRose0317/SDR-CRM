@@ -12,7 +12,7 @@ import Appointments from "@/features/appointments/pages/appointments";
 import Users from "@/features/users/pages/users";
 import Settings from "@/features/settings/pages/settings";
 import Workflows from "@/pages/workflows";
-import BusinessWorkflows from "@/pages/business-workflows";
+
 import NotFound from "@/shared/pages/not-found";
 
 // Portal imports
@@ -84,7 +84,6 @@ function MainAppRouter() {
         <Route path="/appointments" component={Appointments} />
         <Route path="/users" component={Users} />
         <Route path="/workflows" component={Workflows} />
-        <Route path="/business-workflows" component={BusinessWorkflows} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

@@ -4,19 +4,20 @@ import { cn } from '@/lib/utils';
 
 interface NodePaletteProps {
   className?: string;
+  userRole?: string;
 }
 
 const nodeCategories: NodeCategory[] = [
   {
     id: 'triggers',
-    name: 'Triggers',
+    name: 'When This Happens',
     icon: '🚀',
     color: '#10b981',
     nodes: [
       {
         type: NodeType.TRIGGER_PORTAL_SIGNUP,
-        name: 'Portal Signup',
-        description: 'Triggers when a user signs up through the portal',
+        name: 'Portal User Signs Up',
+        description: 'When a new user registers through the patient portal',
         icon: '🚪',
         color: '#10b981',
         defaultConfig: { triggerEvent: 'portal.signup' },
@@ -25,8 +26,8 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.TRIGGER_LEAD_CREATED,
-        name: 'Lead Created',
-        description: 'Triggers when a new lead is created',
+        name: 'New Lead Added',
+        description: 'When a new lead is added to the system',
         icon: '👤',
         color: '#10b981',
         defaultConfig: { triggerEvent: 'lead.created' },
@@ -35,8 +36,8 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.TRIGGER_STATUS_CHANGED,
-        name: 'Status Changed',
-        description: 'Triggers when lead/contact status changes',
+        name: 'Lead Status Changes',
+        description: 'When a lead moves to a different stage in the process',
         icon: '🔄',
         color: '#10b981',
         defaultConfig: { triggerEvent: 'status.changed' },
@@ -47,14 +48,14 @@ const nodeCategories: NodeCategory[] = [
   },
   {
     id: 'actions',
-    name: 'Actions',
+    name: 'Then Do This',
     icon: '⚡',
     color: '#3b82f6',
     nodes: [
       {
         type: NodeType.ACTION_CREATE_LEAD,
-        name: 'Create Lead',
-        description: 'Creates a new lead in the system',
+        name: 'Add New Lead',
+        description: 'Create a new lead record in the system',
         icon: '➕',
         color: '#3b82f6',
         defaultConfig: { actionParameters: { status: 'New' } },
@@ -63,8 +64,8 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.ACTION_UPDATE_STATUS,
-        name: 'Update Status',
-        description: 'Updates the status of a lead or contact',
+        name: 'Change Lead Status',
+        description: 'Move lead to a different stage (New, HHQ Started, etc.)',
         icon: '📝',
         color: '#3b82f6',
         defaultConfig: { actionParameters: { status: 'HHQ Started' } },
@@ -73,8 +74,8 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.ACTION_ASSIGN_USER,
-        name: 'Assign User',
-        description: 'Assigns a lead/contact to a user',
+        name: 'Assign to Team Member',
+        description: 'Assign lead to SDR, Health Coach, or other team member',
         icon: '👥',
         color: '#3b82f6',
         defaultConfig: { actionParameters: { assignToRole: 'SDR' } },
@@ -83,18 +84,18 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.ACTION_CREATE_TASK,
-        name: 'Create Task',
-        description: 'Creates a new task',
+        name: 'Create Follow-up Task',
+        description: 'Create a task for team member to follow up on',
         icon: '✅',
         color: '#3b82f6',
-        defaultConfig: { actionParameters: { title: 'New Task', priority: 'medium' } },
+        defaultConfig: { actionParameters: { title: 'Follow up with lead', priority: 'medium' } },
         inputs: [{ id: 'input', name: 'Input', type: 'data' as const, required: true }],
         outputs: [{ id: 'output', name: 'Output', type: 'data' as const, required: true }],
       },
       {
         type: NodeType.ACTION_SEND_EMAIL,
-        name: 'Send Email',
-        description: 'Sends an email notification',
+        name: 'Send Email Notification',
+        description: 'Send email to team member or patient',
         icon: '📧',
         color: '#3b82f6',
         defaultConfig: { actionParameters: { template: 'default' } },
@@ -103,8 +104,8 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.ACTION_SEND_SLACK,
-        name: 'Send Slack',
-        description: 'Sends a Slack notification',
+        name: 'Notify Team on Slack',
+        description: 'Send notification to team Slack channel',
         icon: '💬',
         color: '#3b82f6',
         defaultConfig: { actionParameters: { channel: 'general' } },
@@ -115,49 +116,49 @@ const nodeCategories: NodeCategory[] = [
   },
   {
     id: 'conditions',
-    name: 'Conditions',
+    name: 'Only If This is True',
     icon: '🔀',
     color: '#f59e0b',
     nodes: [
       {
         type: NodeType.CONDITION_IF,
-        name: 'If Condition',
-        description: 'Conditional logic branching',
+        name: 'Check If...',
+        description: 'Only continue if specific condition is met',
         icon: '❓',
         color: '#f59e0b',
         defaultConfig: { conditionType: 'simple' },
         inputs: [{ id: 'input', name: 'Input', type: 'data' as const, required: true }],
         outputs: [
-          { id: 'true', name: 'True', type: 'condition' as const, required: true },
-          { id: 'false', name: 'False', type: 'condition' as const, required: true },
+          { id: 'true', name: 'Yes', type: 'condition' as const, required: true },
+          { id: 'false', name: 'No', type: 'condition' as const, required: true },
         ],
       },
       {
         type: NodeType.CONDITION_SWITCH,
-        name: 'Switch',
-        description: 'Multi-branch conditional logic',
+        name: 'Choose Based On...',
+        description: 'Different actions based on lead status or other criteria',
         icon: '🔀',
         color: '#f59e0b',
         defaultConfig: { conditionType: 'switch' },
         inputs: [{ id: 'input', name: 'Input', type: 'data' as const, required: true }],
         outputs: [
-          { id: 'case1', name: 'Case 1', type: 'condition' as const, required: true },
-          { id: 'case2', name: 'Case 2', type: 'condition' as const, required: true },
-          { id: 'default', name: 'Default', type: 'condition' as const, required: true },
+          { id: 'case1', name: 'Option 1', type: 'condition' as const, required: true },
+          { id: 'case2', name: 'Option 2', type: 'condition' as const, required: true },
+          { id: 'default', name: 'Otherwise', type: 'condition' as const, required: true },
         ],
       },
     ],
   },
   {
     id: 'utilities',
-    name: 'Utilities',
+    name: 'Wait and Notes',
     icon: '🛠️',
     color: '#8b5cf6',
     nodes: [
       {
         type: NodeType.ACTION_DELAY,
-        name: 'Delay',
-        description: 'Adds a time delay',
+        name: 'Wait Before Next Action',
+        description: 'Wait specific time before continuing (minutes, hours, days)',
         icon: '⏱️',
         color: '#8b5cf6',
         defaultConfig: { delayDuration: 5, delayUnit: 'minutes' },
@@ -166,8 +167,8 @@ const nodeCategories: NodeCategory[] = [
       },
       {
         type: NodeType.UTILITY_NOTE,
-        name: 'Note',
-        description: 'Add documentation note',
+        name: 'Add Note',
+        description: 'Add documentation or reminder note to your workflow',
         icon: '📄',
         color: '#6b7280',
         defaultConfig: { note: 'Add your note here' },

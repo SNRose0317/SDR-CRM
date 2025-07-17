@@ -68,6 +68,7 @@ interface WorkflowBuilderProps {
   onSave?: (workflow: WorkflowDefinition) => void;
   onTest?: (workflow: WorkflowDefinition) => void;
   onDeploy?: (workflow: WorkflowDefinition) => void;
+  userRole?: string;
 }
 
 const WorkflowBuilderComponent: React.FC<WorkflowBuilderProps> = ({
@@ -75,6 +76,7 @@ const WorkflowBuilderComponent: React.FC<WorkflowBuilderProps> = ({
   onSave,
   onTest,
   onDeploy,
+  userRole = 'sdr',
 }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNode>(workflow.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<WorkflowEdge>(workflow.edges);
@@ -254,7 +256,10 @@ const WorkflowBuilderComponent: React.FC<WorkflowBuilderProps> = ({
 
       <div className="flex h-full pt-16">
         {/* Node Palette */}
-        <NodePalette className="w-64 border-r border-gray-200 dark:border-gray-700" />
+        <NodePalette 
+          className="w-64 border-r border-gray-200 dark:border-gray-700" 
+          userRole={userRole}
+        />
 
         {/* Main Canvas */}
         <div className="flex-1 relative">
@@ -337,26 +342,26 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = (props) => {
   );
 };
 
-// Helper functions
+// Helper functions with business-friendly labels
 function getNodeLabel(type: NodeType): string {
   const labels: Record<NodeType, string> = {
-    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'Portal Signup',
-    [NodeType.TRIGGER_LEAD_CREATED]: 'Lead Created',
-    [NodeType.TRIGGER_STATUS_CHANGED]: 'Status Changed',
-    [NodeType.ACTION_CREATE_LEAD]: 'Create Lead',
-    [NodeType.ACTION_UPDATE_STATUS]: 'Update Status',
-    [NodeType.ACTION_ASSIGN_USER]: 'Assign User',
-    [NodeType.ACTION_CREATE_TASK]: 'Create Task',
-    [NodeType.ACTION_SEND_EMAIL]: 'Send Email',
-    [NodeType.ACTION_SEND_SLACK]: 'Send Slack',
-    [NodeType.CONDITION_IF]: 'If Condition',
-    [NodeType.CONDITION_SWITCH]: 'Switch',
-    [NodeType.ACTION_DELAY]: 'Delay',
+    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'Portal User Signs Up',
+    [NodeType.TRIGGER_LEAD_CREATED]: 'New Lead Added',
+    [NodeType.TRIGGER_STATUS_CHANGED]: 'Lead Status Changes',
+    [NodeType.ACTION_CREATE_LEAD]: 'Add New Lead',
+    [NodeType.ACTION_UPDATE_STATUS]: 'Change Lead Status',
+    [NodeType.ACTION_ASSIGN_USER]: 'Assign to Team Member',
+    [NodeType.ACTION_CREATE_TASK]: 'Create Follow-up Task',
+    [NodeType.ACTION_SEND_EMAIL]: 'Send Email Notification',
+    [NodeType.ACTION_SEND_SLACK]: 'Notify Team on Slack',
+    [NodeType.CONDITION_IF]: 'Check If...',
+    [NodeType.CONDITION_SWITCH]: 'Choose Based On...',
+    [NodeType.ACTION_DELAY]: 'Wait Before Next Action',
     [NodeType.TRIGGER_SCHEDULE]: 'Schedule',
     [NodeType.TRIGGER_WEBHOOK]: 'Webhook',
     [NodeType.CONDITION_WAIT]: 'Wait',
     [NodeType.ACTION_WEBHOOK]: 'Webhook',
-    [NodeType.UTILITY_NOTE]: 'Note',
+    [NodeType.UTILITY_NOTE]: 'Add Note',
     [NodeType.UTILITY_MERGE]: 'Merge',
     [NodeType.UTILITY_SPLIT]: 'Split',
   };
@@ -365,23 +370,23 @@ function getNodeLabel(type: NodeType): string {
 
 function getNodeDescription(type: NodeType): string {
   const descriptions: Record<NodeType, string> = {
-    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'Triggers when a user signs up through the portal',
-    [NodeType.TRIGGER_LEAD_CREATED]: 'Triggers when a new lead is created',
-    [NodeType.TRIGGER_STATUS_CHANGED]: 'Triggers when lead/contact status changes',
-    [NodeType.ACTION_CREATE_LEAD]: 'Creates a new lead in the system',
-    [NodeType.ACTION_UPDATE_STATUS]: 'Updates the status of a lead or contact',
-    [NodeType.ACTION_ASSIGN_USER]: 'Assigns a lead/contact to a user',
-    [NodeType.ACTION_CREATE_TASK]: 'Creates a new task',
-    [NodeType.ACTION_SEND_EMAIL]: 'Sends an email notification',
-    [NodeType.ACTION_SEND_SLACK]: 'Sends a Slack notification',
-    [NodeType.CONDITION_IF]: 'Conditional logic branching',
-    [NodeType.CONDITION_SWITCH]: 'Multi-branch conditional logic',
-    [NodeType.ACTION_DELAY]: 'Adds a time delay',
+    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'When a new user registers through the patient portal',
+    [NodeType.TRIGGER_LEAD_CREATED]: 'When a new lead is added to the system',
+    [NodeType.TRIGGER_STATUS_CHANGED]: 'When a lead moves to a different stage in the process',
+    [NodeType.ACTION_CREATE_LEAD]: 'Create a new lead record in the system',
+    [NodeType.ACTION_UPDATE_STATUS]: 'Move lead to a different stage (New, HHQ Started, etc.)',
+    [NodeType.ACTION_ASSIGN_USER]: 'Assign lead to SDR, Health Coach, or other team member',
+    [NodeType.ACTION_CREATE_TASK]: 'Create a task for team member to follow up on',
+    [NodeType.ACTION_SEND_EMAIL]: 'Send email to team member or patient',
+    [NodeType.ACTION_SEND_SLACK]: 'Send notification to team Slack channel',
+    [NodeType.CONDITION_IF]: 'Only continue if specific condition is met',
+    [NodeType.CONDITION_SWITCH]: 'Different actions based on lead status or other criteria',
+    [NodeType.ACTION_DELAY]: 'Wait specific time before continuing (minutes, hours, days)',
     [NodeType.TRIGGER_SCHEDULE]: 'Scheduled trigger',
     [NodeType.TRIGGER_WEBHOOK]: 'Webhook trigger',
     [NodeType.CONDITION_WAIT]: 'Wait for condition',
     [NodeType.ACTION_WEBHOOK]: 'Call webhook',
-    [NodeType.UTILITY_NOTE]: 'Add note',
+    [NodeType.UTILITY_NOTE]: 'Add documentation or reminder note to your workflow',
     [NodeType.UTILITY_MERGE]: 'Merge flows',
     [NodeType.UTILITY_SPLIT]: 'Split flow',
   };
