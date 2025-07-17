@@ -41,7 +41,9 @@ function PortalRouter() {
         <Route path="/portal/messages" component={PortalMessages} />
         <Route path="/portal/profile" component={PortalProfile} />
         <Route path="/portal/records" component={() => <div>Records coming soon</div>} />
-        <Route path="/portal*" component={() => <PortalDashboard />} />
+        <Route path="/portal/login" component={PortalLogin} />
+        <Route path="/portal/" component={PortalDashboard} />
+        <Route path="/portal" component={PortalDashboard} />
       </Switch>
     </PortalLayout>
   );
@@ -50,7 +52,8 @@ function PortalRouter() {
 function Router() {
   return (
     <Switch>
-      {/* Portal routes */}
+      {/* Portal routes - handle all /portal/* paths */}
+      <Route path="/portal/login" component={PortalLogin} />
       <Route path="/portal*" component={PortalRouter} />
       
       {/* Main app routes */}
