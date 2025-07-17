@@ -122,7 +122,7 @@ export default function Tasks() {
       key: "title",
       label: "Task",
       sortable: true,
-      render: (_, row: Task) => (
+      render: (_: any, row: Task) => (
         <div>
           <div className="font-medium">{row.title}</div>
           <div className="text-sm text-muted-foreground">{row.description}</div>
@@ -153,7 +153,7 @@ export default function Tasks() {
       key: "assignedToId",
       label: "Assigned To",
       render: (value: number) => {
-        const assignee = users?.find((u: any) => u.id === value);
+        const assignee = Array.isArray(users) ? users.find((u: any) => u.id === value) : undefined;
         return assignee ? (
           <div className="flex items-center space-x-2">
             <Avatar>
@@ -171,9 +171,9 @@ export default function Tasks() {
     {
       key: "relatedContact",
       label: "Related Contact",
-      render: (_, row: Task) => {
+      render: (_: any, row: Task) => {
         if (row.leadId) {
-          const lead = leads?.find((l: any) => l.id === row.leadId);
+          const lead = Array.isArray(leads) ? leads.find((l: any) => l.id === row.leadId) : undefined;
           return lead ? (
             <div className="text-sm">
               <div>{lead.firstName} {lead.lastName}</div>
@@ -182,7 +182,7 @@ export default function Tasks() {
           ) : null;
         }
         if (row.contactId) {
-          const contact = contacts?.find((c: any) => c.id === row.contactId);
+          const contact = Array.isArray(contacts) ? contacts.find((c: any) => c.id === row.contactId) : undefined;
           return contact ? (
             <div className="text-sm">
               <div>{contact.firstName} {contact.lastName}</div>
@@ -217,7 +217,7 @@ export default function Tasks() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row: Task) => (
+      render: (_: any, row: Task) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -258,7 +258,7 @@ export default function Tasks() {
           <SelectValue placeholder="All Priorities" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Priorities</SelectItem>
+          <SelectItem value="all">All Priorities</SelectItem>
           <SelectItem value="Low">Low</SelectItem>
           <SelectItem value="Medium">Medium</SelectItem>
           <SelectItem value="High">High</SelectItem>
@@ -272,7 +272,7 @@ export default function Tasks() {
           <SelectValue placeholder="All Statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Statuses</SelectItem>
+          <SelectItem value="all">All Statuses</SelectItem>
           <SelectItem value="Pending">Pending</SelectItem>
           <SelectItem value="In Progress">In Progress</SelectItem>
           <SelectItem value="Completed">Completed</SelectItem>
@@ -286,8 +286,8 @@ export default function Tasks() {
           <SelectValue placeholder="All Assignees" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Assignees</SelectItem>
-          {users?.map((user: any) => (
+          <SelectItem value="all">All Assignees</SelectItem>
+          {Array.isArray(users) && users.map((user: any) => (
             <SelectItem key={user.id} value={user.id.toString()}>
               {user.firstName} {user.lastName}
             </SelectItem>

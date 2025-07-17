@@ -85,7 +85,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {activityLogs?.slice(0, 5).map((log: any, index: number) => (
+                {Array.isArray(activityLogs) && activityLogs.slice(0, 5).map((log: any, index: number) => (
                   <div key={index} className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
                       <Activity className="w-5 h-5 text-primary" />
@@ -99,7 +99,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
-                {(!activityLogs || activityLogs.length === 0) && (
+                {(!Array.isArray(activityLogs) || activityLogs.length === 0) && (
                   <p className="text-muted-foreground">No recent activity</p>
                 )}
               </div>
@@ -114,7 +114,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {leadStats?.map((stat: any) => (
+              {Array.isArray(leadStats) && leadStats.map((stat: any) => (
                 <div key={stat.status} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{stat.status}</span>
@@ -128,7 +128,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              {(!leadStats || leadStats.length === 0) && (
+              {(!Array.isArray(leadStats) || leadStats.length === 0) && (
                 <p className="text-muted-foreground">No lead data available</p>
               )}
             </div>

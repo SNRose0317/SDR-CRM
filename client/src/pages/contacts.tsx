@@ -101,7 +101,7 @@ export default function Contacts() {
       key: "name",
       label: "Contact Name",
       sortable: true,
-      render: (_, row: Contact) => (
+      render: (_: any, row: Contact) => (
         <div className="flex items-center space-x-3">
           <Avatar>
             <AvatarFallback>
@@ -129,7 +129,7 @@ export default function Contacts() {
       key: "healthCoachId",
       label: "Health Coach",
       render: (value: number) => {
-        const coach = users?.find((u: any) => u.id === value);
+        const coach = Array.isArray(users) ? users.find((u: any) => u.id === value) : undefined;
         return coach ? (
           <div className="flex items-center space-x-2">
             <Avatar>
@@ -162,7 +162,7 @@ export default function Contacts() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row: Contact) => (
+      render: (_: any, row: Contact) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -205,7 +205,7 @@ export default function Contacts() {
           <SelectValue placeholder="All Stages" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Stages</SelectItem>
+          <SelectItem value="all">All Stages</SelectItem>
           {Object.keys(stageColors).map((stage) => (
             <SelectItem key={stage} value={stage}>{stage}</SelectItem>
           ))}
@@ -219,8 +219,8 @@ export default function Contacts() {
           <SelectValue placeholder="All Health Coaches" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Health Coaches</SelectItem>
-          {users?.filter((user: any) => user.role === "Health Coach").map((user: any) => (
+          <SelectItem value="all">All Health Coaches</SelectItem>
+          {Array.isArray(users) && users.filter((user: any) => user.role === "Health Coach").map((user: any) => (
             <SelectItem key={user.id} value={user.id.toString()}>
               {user.firstName} {user.lastName}
             </SelectItem>
@@ -263,7 +263,7 @@ export default function Contacts() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {contactStats?.slice(0, 5).map((stat: any) => (
+            {Array.isArray(contactStats) && contactStats.slice(0, 5).map((stat: any) => (
               <div key={stat.stage} className="bg-muted rounded-lg p-4">
                 <h4 className="font-medium text-sm mb-2">{stat.stage}</h4>
                 <div className="text-2xl font-bold">{stat.count}</div>

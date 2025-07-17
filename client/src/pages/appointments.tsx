@@ -127,7 +127,7 @@ export default function Appointments() {
       key: "title",
       label: "Appointment",
       sortable: true,
-      render: (_, row: Appointment) => (
+      render: (_: any, row: Appointment) => (
         <div>
           <div className="font-medium">{row.title}</div>
           <div className="text-sm text-muted-foreground">{row.description}</div>
@@ -161,7 +161,7 @@ export default function Appointments() {
       key: "userId",
       label: "Provider",
       render: (value: number) => {
-        const provider = users?.find((u: any) => u.id === value);
+        const provider = Array.isArray(users) ? users.find((u: any) => u.id === value) : undefined;
         return provider ? (
           <div className="text-sm">
             <div>{provider.firstName} {provider.lastName}</div>
@@ -175,9 +175,9 @@ export default function Appointments() {
     {
       key: "patient",
       label: "Patient",
-      render: (_, row: Appointment) => {
+      render: (_: any, row: Appointment) => {
         if (row.leadId) {
-          const lead = leads?.find((l: any) => l.id === row.leadId);
+          const lead = Array.isArray(leads) ? leads.find((l: any) => l.id === row.leadId) : undefined;
           return lead ? (
             <div className="text-sm">
               <div>{lead.firstName} {lead.lastName}</div>
@@ -186,7 +186,7 @@ export default function Appointments() {
           ) : null;
         }
         if (row.contactId) {
-          const contact = contacts?.find((c: any) => c.id === row.contactId);
+          const contact = Array.isArray(contacts) ? contacts.find((c: any) => c.id === row.contactId) : undefined;
           return contact ? (
             <div className="text-sm">
               <div>{contact.firstName} {contact.lastName}</div>
@@ -205,7 +205,7 @@ export default function Appointments() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row: Appointment) => (
+      render: (_: any, row: Appointment) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -256,7 +256,7 @@ export default function Appointments() {
           <SelectValue placeholder="All Statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Statuses</SelectItem>
+          <SelectItem value="all">All Statuses</SelectItem>
           <SelectItem value="Scheduled">Scheduled</SelectItem>
           <SelectItem value="Confirmed">Confirmed</SelectItem>
           <SelectItem value="Completed">Completed</SelectItem>
@@ -272,8 +272,8 @@ export default function Appointments() {
           <SelectValue placeholder="All Providers" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Providers</SelectItem>
-          {users?.map((user: any) => (
+          <SelectItem value="all">All Providers</SelectItem>
+          {Array.isArray(users) && users.map((user: any) => (
             <SelectItem key={user.id} value={user.id.toString()}>
               {user.firstName} {user.lastName}
             </SelectItem>

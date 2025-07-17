@@ -175,8 +175,8 @@ export default function LeadForm({ lead, onSuccess, onCancel }: LeadFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
-                    {users?.map((user: any) => (
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {Array.isArray(users) && users.map((user: any) => (
                       <SelectItem key={user.id} value={user.id.toString()}>
                         {user.firstName} {user.lastName}
                       </SelectItem>

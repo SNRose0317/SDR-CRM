@@ -30,4 +30,6 @@ export interface FilterOptions {
   userId?: number;
   search?: string;
   date?: string;
+  role?: string;
+  isActive?: boolean;
 }

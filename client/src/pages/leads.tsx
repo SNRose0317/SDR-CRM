@@ -86,7 +86,7 @@ export default function Leads() {
       key: "name",
       label: "Lead Name",
       sortable: true,
-      render: (_, row: Lead) => (
+      render: (_: any, row: Lead) => (
         <div className="flex items-center space-x-3">
           <Avatar>
             <AvatarFallback>
@@ -114,7 +114,7 @@ export default function Leads() {
       key: "ownerId",
       label: "Owner",
       render: (value: number) => {
-        const owner = users?.find((u: any) => u.id === value);
+        const owner = Array.isArray(users) ? users.find((u: any) => u.id === value) : undefined;
         return owner ? (
           <div className="flex items-center space-x-2">
             <Avatar>
@@ -147,7 +147,7 @@ export default function Leads() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row: Lead) => (
+      render: (_: any, row: Lead) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -186,7 +186,7 @@ export default function Leads() {
           <SelectValue placeholder="All Statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Statuses</SelectItem>
+          <SelectItem value="all">All Statuses</SelectItem>
           <SelectItem value="HHQ Started">HHQ Started</SelectItem>
           <SelectItem value="HHQ Signed">HHQ Signed</SelectItem>
           <SelectItem value="Booking: Not Paid">Booking: Not Paid</SelectItem>
@@ -202,8 +202,8 @@ export default function Leads() {
           <SelectValue placeholder="All Owners" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Owners</SelectItem>
-          {users?.map((user: any) => (
+          <SelectItem value="all">All Owners</SelectItem>
+          {Array.isArray(users) && users.map((user: any) => (
             <SelectItem key={user.id} value={user.id.toString()}>
               {user.firstName} {user.lastName}
             </SelectItem>

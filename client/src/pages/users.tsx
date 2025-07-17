@@ -78,7 +78,7 @@ export default function Users() {
       key: "user",
       label: "User",
       sortable: true,
-      render: (_, row: User) => (
+      render: (_: any, row: User) => (
         <div className="flex items-center space-x-3">
           <Avatar>
             <AvatarFallback>
@@ -133,7 +133,7 @@ export default function Users() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row: User) => (
+      render: (_: any, row: User) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -146,7 +146,7 @@ export default function Users() {
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={() => handleToggleActive(row.id, row.isActive)}
+              onClick={() => handleToggleActive(row.id, row.isActive || false)}
             >
               <UserX className="w-4 h-4 mr-2" />
               {row.isActive ? 'Deactivate' : 'Activate'}
@@ -167,7 +167,7 @@ export default function Users() {
           <SelectValue placeholder="All Roles" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Roles</SelectItem>
+          <SelectItem value="all">All Roles</SelectItem>
           <SelectItem value="SDR">SDR</SelectItem>
           <SelectItem value="Health Coach">Health Coach</SelectItem>
           <SelectItem value="Admin">Admin</SelectItem>
@@ -181,7 +181,7 @@ export default function Users() {
           <SelectValue placeholder="All Statuses" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Statuses</SelectItem>
+          <SelectItem value="all">All Statuses</SelectItem>
           <SelectItem value="true">Active</SelectItem>
           <SelectItem value="false">Inactive</SelectItem>
         </SelectContent>

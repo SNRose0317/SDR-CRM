@@ -251,10 +251,21 @@ export class DatabaseStorage implements IStorage {
 
   async getContactStats(): Promise<any> {
     const stages = [
-      'Intake', 'Health Assessment', 'Goal Setting', 'Initial Consultation',
-      'Program Design', 'Onboarding', 'Active Program', 'Progress Review',
-      'Adjustment', 'Maintenance', 'Follow-up', 'Renewal Discussion',
-      'Renewal', 'Graduation', 'Annual Process'
+      'Intake',
+      'Initial Labs',
+      'Initial Lab Review',
+      'Initial Provider Exam',
+      'Initial Medication Order',
+      '1st Follow-up Labs',
+      'First Follow-Up Lab Review',
+      'First Follow-Up Provider Exam',
+      'First Medication Refill',
+      'Second Follow-Up Labs',
+      'Second Follow-Up Lab Review',
+      'Second Follow-up Provider Exam',
+      'Second Medication Refill',
+      'Third Medication Refill',
+      'Restart Annual Process'
     ];
     
     const stats = await Promise.all(

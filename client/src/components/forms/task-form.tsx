@@ -184,8 +184,8 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
-                    {users?.map((user: any) => (
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {Array.isArray(users) && users.map((user: any) => (
                       <SelectItem key={user.id} value={user.id.toString()}>
                         {user.firstName} {user.lastName}
                       </SelectItem>
@@ -226,8 +226,8 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No lead</SelectItem>
-                    {leads?.map((lead: any) => (
+                    <SelectItem value="no-lead">No lead</SelectItem>
+                    {Array.isArray(leads) && leads.map((lead: any) => (
                       <SelectItem key={lead.id} value={lead.id.toString()}>
                         {lead.firstName} {lead.lastName}
                       </SelectItem>
@@ -252,8 +252,8 @@ export default function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No contact</SelectItem>
-                    {contacts?.map((contact: any) => (
+                    <SelectItem value="no-contact">No contact</SelectItem>
+                    {Array.isArray(contacts) && contacts.map((contact: any) => (
                       <SelectItem key={contact.id} value={contact.id.toString()}>
                         {contact.firstName} {contact.lastName}
                       </SelectItem>

@@ -94,7 +94,7 @@ export default function ContactForm({ contact, onSuccess, onCancel }: ContactFor
     mutation.mutate(data);
   };
 
-  const healthCoaches = users?.filter((user: any) => user.role === "Health Coach");
+  const healthCoaches = Array.isArray(users) ? users.filter((user: any) => user.role === "Health Coach") : [];
 
   return (
     <Form {...form}>
@@ -195,7 +195,7 @@ export default function ContactForm({ contact, onSuccess, onCancel }: ContactFor
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {healthCoaches?.map((coach: any) => (
                       <SelectItem key={coach.id} value={coach.id.toString()}>
                         {coach.firstName} {coach.lastName}
