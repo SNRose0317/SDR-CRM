@@ -191,55 +191,55 @@ export const NodePalette: React.FC<NodePaletteProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn('bg-white dark:bg-gray-800 overflow-y-auto', className)}>
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className={cn('bg-background overflow-y-auto', className)}>
+      <div className="p-4 border-b border-border">
+        <h2 className="text-lg font-semibold text-foreground">
           Workflow Nodes
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Drag and drop nodes to create your workflow
         </p>
       </div>
 
       <div className="space-y-2 p-4">
         {nodeCategories.map((category) => (
-          <div key={category.id} className="border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div key={category.id} className="border border-border rounded-lg">
             <button
               onClick={() => toggleCategory(category.id)}
-              className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center justify-between p-3 text-left hover:bg-muted transition-colors"
             >
               <div className="flex items-center space-x-3">
                 <span className="text-lg">{category.icon}</span>
-                <span className="font-medium text-gray-900 dark:text-white">
+                <span className="font-medium text-foreground">
                   {category.name}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-muted-foreground">
                   ({category.nodes.length})
                 </span>
               </div>
-              <div className="text-gray-400 dark:text-gray-500">
+              <div className="text-muted-foreground">
                 {expandedCategory === category.id ? '▼' : '▶'}
               </div>
             </button>
 
             {expandedCategory === category.id && (
-              <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+              <div className="border-t border-border bg-muted/50">
                 {category.nodes.map((node) => (
                   <div
                     key={node.type}
                     draggable
                     onDragStart={(e) => onDragStart(e, node.type)}
-                    className="flex items-center p-3 cursor-move hover:bg-gray-100 dark:hover:bg-gray-600 border-b border-gray-200 dark:border-gray-700 last:border-b-0 transition-colors"
+                    className="flex items-center p-3 cursor-move hover:bg-muted border-b border-border last:border-b-0 transition-colors bg-background"
                   >
                     <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md mr-3"
                          style={{ backgroundColor: node.color + '20', color: node.color }}>
                       <span className="text-sm">{node.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="text-sm font-medium text-foreground">
                         {node.name}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <div className="text-xs text-muted-foreground truncate">
                         {node.description}
                       </div>
                     </div>
@@ -251,8 +251,8 @@ export const NodePalette: React.FC<NodePaletteProps> = ({ className }) => {
         ))}
       </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+      <div className="p-4 border-t border-border">
+        <div className="text-xs text-muted-foreground space-y-1">
           <div>💡 <span className="font-medium">Tip:</span> Drag nodes to the canvas</div>
           <div>🔗 <span className="font-medium">Connect:</span> Link nodes with arrows</div>
           <div>⚙️ <span className="font-medium">Configure:</span> Click nodes to edit</div>
