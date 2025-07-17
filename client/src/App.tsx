@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/shared/components/ui/toaster";
@@ -24,13 +24,15 @@ import { usePortalAuth } from "@/features/portal/hooks/usePortalAuth";
 
 function PortalRouter() {
   const { isAuthenticated, isLoading } = usePortalAuth();
+  const [location, navigate] = useLocation();
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
-    return <PortalLogin />;
+    navigate('/portal/login');
+    return null;
   }
 
   return (
@@ -41,7 +43,6 @@ function PortalRouter() {
         <Route path="/portal/messages" component={PortalMessages} />
         <Route path="/portal/profile" component={PortalProfile} />
         <Route path="/portal/records" component={() => <div>Records coming soon</div>} />
-        <Route path="/portal/login" component={PortalLogin} />
         <Route path="/portal/" component={PortalDashboard} />
         <Route path="/portal" component={PortalDashboard} />
       </Switch>
@@ -52,9 +53,17 @@ function PortalRouter() {
 function Router() {
   return (
     <Switch>
-      {/* Portal routes - handle all /portal/* paths */}
+      {/* Portal login route - always show login if not authenticated */}
       <Route path="/portal/login" component={PortalLogin} />
-      <Route path="/portal*" component={PortalRouter} />
+      
+      {/* Portal authenticated routes */}
+      <Route path="/portal/dashboard" component={PortalRouter} />
+      <Route path="/portal/appointments" component={PortalRouter} />
+      <Route path="/portal/messages" component={PortalRouter} />
+      <Route path="/portal/profile" component={PortalRouter} />
+      <Route path="/portal/records" component={PortalRouter} />
+      <Route path="/portal/" component={PortalRouter} />
+      <Route path="/portal" component={PortalRouter} />
       
       {/* Main app routes */}
       <Route path="*" component={MainAppRouter} />

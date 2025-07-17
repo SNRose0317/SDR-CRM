@@ -1,5 +1,5 @@
-import PatientDashboard from "../components/dashboard/patient-dashboard";
+import PortalSimpleDashboard from "./portal-simple-dashboard";
 
 export default function PortalDashboardPage() {
-  return <PatientDashboard />;
+  return <PortalSimpleDashboard />;
 }
