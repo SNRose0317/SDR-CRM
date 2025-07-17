@@ -1,16 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
-import { users, contacts, patientSessions } from '@shared/schema';
+import { users, contacts, portalSessions } from '@shared/schema';
 import { eq, and, gt } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import bcrypt from 'bcrypt';
 
 interface PortalUser {
   id: number;
   email: string;
   firstName: string;
   lastName: string;
-  contactId: number;
-  contact: any;
+  contactId?: number;
+  contact?: any;
 }
 
 export class PortalAuthService {
@@ -18,22 +19,24 @@ export class PortalAuthService {
     user: PortalUser;
     sessionToken: string;
   } | null> {
-    // For now, use email as password for portal access (in production, use proper password hashing)
-    // Find user with portal access and Patient role
+    // Find user with Patient role
     const [userResult] = await db
       .select()
       .from(users)
-      .leftJoin(contacts, eq(users.contactId, contacts.id))
       .where(
         and(
           eq(users.email, email),
-          eq(users.role, 'Patient'),
-          eq(users.portalAccess, true),
-          eq(users.isActive, true)
+          eq(users.role, 'Patient')
         )
       );
 
-    if (!userResult || !userResult.users) {
+    if (!userResult || !userResult.passwordHash) {
+      return null;
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, userResult.passwordHash);
+    if (!isValidPassword) {
       return null;
     }
 
@@ -41,26 +44,18 @@ export class PortalAuthService {
     const sessionToken = nanoid(32);
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    await db.insert(patientSessions).values({
-      patientId: userResult.users.contactId!,
+    await db.insert(portalSessions).values({
+      userId: userResult.id,
       sessionToken,
       expiresAt,
     });
 
-    // Update last portal login
-    await db
-      .update(users)
-      .set({ lastPortalLogin: new Date() })
-      .where(eq(users.id, userResult.users.id));
-
     return {
       user: {
-        id: userResult.users.id,
-        email: userResult.users.email,
-        firstName: userResult.users.firstName || '',
-        lastName: userResult.users.lastName || '',
-        contactId: userResult.users.contactId!,
-        contact: userResult.contacts,
+        id: userResult.id,
+        email: userResult.email,
+        firstName: userResult.firstName,
+        lastName: userResult.lastName,
       },
       sessionToken,
     };
@@ -69,51 +64,53 @@ export class PortalAuthService {
   async validateSession(sessionToken: string): Promise<PortalUser | null> {
     const [sessionResult] = await db
       .select()
-      .from(patientSessions)
-      .leftJoin(contacts, eq(patientSessions.patientId, contacts.id))
-      .leftJoin(users, eq(users.contactId, patientSessions.patientId))
+      .from(portalSessions)
+      .leftJoin(users, eq(portalSessions.userId, users.id))
       .where(
         and(
-          eq(patientSessions.sessionToken, sessionToken),
-          gt(patientSessions.expiresAt, new Date())
+          eq(portalSessions.sessionToken, sessionToken),
+          gt(portalSessions.expiresAt, new Date())
         )
       );
 
-    if (!sessionResult || !sessionResult.users) return null;
+    if (!sessionResult || !sessionResult.users) {
+      return null;
+    }
 
     return {
       id: sessionResult.users.id,
       email: sessionResult.users.email,
-      firstName: sessionResult.users.firstName || '',
-      lastName: sessionResult.users.lastName || '',
-      contactId: sessionResult.users.contactId!,
-      contact: sessionResult.contacts,
+      firstName: sessionResult.users.firstName,
+      lastName: sessionResult.users.lastName,
     };
   }
 
   async logoutPatient(sessionToken: string): Promise<void> {
-    await db
-      .update(patientSessions)
-      .set({ expiresAt: new Date() }) // Expire the session
-      .where(eq(patientSessions.sessionToken, sessionToken));
+    await db.delete(portalSessions).where(eq(portalSessions.sessionToken, sessionToken));
   }
 }
 
-// Middleware for portal authentication
 export const portalAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const sessionToken = req.headers.authorization?.replace('Bearer ', '');
+  const authHeader = req.headers.authorization;
   
-  if (!sessionToken) {
-    return res.status(401).json({ error: 'No session token provided' });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
   }
 
+  const token = authHeader.substring(7);
   const authService = new PortalAuthService();
-  const user = await authService.validateSession(sessionToken);
+  
+  try {
+    const user = await authService.validateSession(token);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid or expired session' });
+    (req as any).user = user;
+    next();
+  } catch (error) {
+    console.error('Auth middleware error:', error);
+    return res.status(500).json({ error: 'Authentication failed' });
   }
-
-  (req as any).user = user;
-  next();
 };

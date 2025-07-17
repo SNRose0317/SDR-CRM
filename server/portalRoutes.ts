@@ -2,20 +2,90 @@ import { Router } from 'express';
 import { PortalAuthService, portalAuth } from './portalAuth';
 import { db } from './db';
 import { 
-  contacts, 
-  appointments, 
-  patientMessages, 
-  patientNotifications,
-  patientActivities,
-  users
+  users,
+  activityLogs,
+  leads
 } from '@shared/schema';
-import { eq, desc, and } from 'drizzle-orm';
-import { insertPatientActivitySchema, insertPatientMessageSchema } from '@shared/schema';
+import { eq, desc } from 'drizzle-orm';
+import { signupSchema } from '@shared/schema';
+import bcrypt from 'bcrypt';
+import { automationManager } from './automation/automationManager';
 
 const router = Router();
 const authService = new PortalAuthService();
 
-// Authentication endpoints
+// Signup endpoint - creates user account and automatically creates a lead
+router.post('/signup', async (req, res) => {
+  try {
+    const validatedData = signupSchema.parse(req.body);
+    
+    // Check if user already exists
+    const existingUser = await db.select().from(users).where(eq(users.email, validatedData.email));
+    if (existingUser.length > 0) {
+      return res.status(400).json({ error: 'User already exists with this email' });
+    }
+    
+    // Hash password
+    const passwordHash = await bcrypt.hash(validatedData.password, 10);
+    
+    // Create user account
+    const [newUser] = await db.insert(users).values({
+      email: validatedData.email,
+      firstName: validatedData.firstName,
+      lastName: validatedData.lastName,
+      passwordHash,
+      role: 'Patient',
+    }).returning();
+    
+    // Trigger automation for portal signup
+    const automationResults = await automationManager.triggerPortalSignup({
+      ...validatedData,
+      role: 'Patient',
+      id: newUser.id
+    }, newUser.id);
+    
+    // Get the lead that was created by automation
+    const leadCreationResult = automationResults.find(r => 
+      r.success && r.data && r.data.leadId
+    );
+    
+    let leadInfo = null;
+    if (leadCreationResult) {
+      leadInfo = leadCreationResult.data;
+    }
+    
+    res.status(201).json({ 
+      message: 'Account created successfully',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+      },
+      lead: leadInfo ? {
+        id: leadInfo.leadId,
+        status: leadInfo.lead.status,
+        message: 'Lead created automatically - our team will contact you soon!'
+      } : null,
+      automation: {
+        triggered: automationResults.length > 0,
+        results: automationResults.map(r => ({
+          success: r.success,
+          message: r.message
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to create account' });
+    }
+  }
+});
+
+// Login endpoint
 router.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
   
@@ -23,15 +93,16 @@ router.post('/auth/login', async (req, res) => {
     const result = await authService.loginPatient(email, password);
     
     if (!result) {
-      return res.status(401).json({ error: 'Invalid credentials or portal access not enabled' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Log portal activity
-    await db.insert(patientActivities).values({
-      patientId: result.user.contactId,
-      activityType: 'LOGIN',
-      activityDescription: 'Patient logged into portal',
-      metadata: JSON.stringify({ timestamp: new Date() }),
+    await db.insert(activityLogs).values({
+      entityType: 'user',
+      entityId: result.user.id,
+      userId: result.user.id,
+      action: 'portal_login',
+      details: 'Patient logged into portal',
     });
 
     res.json({
@@ -44,6 +115,7 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+// Logout endpoint
 router.post('/auth/logout', portalAuth, async (req: any, res) => {
   try {
     const sessionToken = req.headers.authorization?.replace('Bearer ', '');
@@ -53,182 +125,74 @@ router.post('/auth/logout', portalAuth, async (req: any, res) => {
     
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Portal logout error:', error);
+    console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
   }
 });
 
-// Patient data endpoints
+// Get user profile
 router.get('/patient/profile', portalAuth, async (req: any, res) => {
   try {
-    const [contact] = await db
+    const userId = req.user.id;
+    
+    const [profile] = await db
       .select()
-      .from(contacts)
-      .leftJoin(users, eq(contacts.healthCoachId, users.id))
-      .where(eq(contacts.id, req.user.contactId));
-
-    if (!contact) {
-      return res.status(404).json({ error: 'Patient profile not found' });
+      .from(users)
+      .where(eq(users.id, userId));
+    
+    if (!profile) {
+      return res.status(404).json({ error: 'Profile not found' });
     }
-
-    // Log activity
-    await db.insert(patientActivities).values({
-      patientId: req.user.contactId,
-      activityType: 'PROFILE_UPDATE',
-      activityDescription: 'Patient viewed profile',
-    });
-
+    
     res.json({
-      ...contact.contacts,
-      healthCoach: contact.users ? {
-        id: contact.users.id,
-        firstName: contact.users.firstName,
-        lastName: contact.users.lastName,
-        email: contact.users.email,
-      } : null,
+      id: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: profile.email,
+      role: profile.role,
+      createdAt: profile.createdAt,
     });
   } catch (error) {
-    console.error('Error fetching patient profile:', error);
+    console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
 
-router.get('/patient/appointments', portalAuth, async (req: any, res) => {
+// Get user activities
+router.get('/patient/activities', portalAuth, async (req: any, res) => {
   try {
-    const appointmentList = await db
-      .select()
-      .from(appointments)
-      .leftJoin(users, eq(appointments.userId, users.id))
-      .where(eq(appointments.contactId, req.user.contactId))
-      .orderBy(desc(appointments.scheduledAt));
-
-    // Log activity
-    await db.insert(patientActivities).values({
-      patientId: req.user.contactId,
-      activityType: 'RECORD_ACCESSED',
-      activityDescription: 'Patient viewed appointments',
-    });
-
-    const formattedAppointments = appointmentList.map(apt => ({
-      ...apt.appointments,
-      provider: apt.users ? {
-        id: apt.users.id,
-        firstName: apt.users.firstName,
-        lastName: apt.users.lastName,
-      } : null,
-    }));
-
-    res.json(formattedAppointments);
+    const userId = req.user.id;
+    
+    const activities = await db
+      .select({
+        id: activityLogs.id,
+        activityType: activityLogs.action,
+        activityDescription: activityLogs.details,
+        createdAt: activityLogs.createdAt,
+      })
+      .from(activityLogs)
+      .where(eq(activityLogs.userId, userId))
+      .orderBy(desc(activityLogs.createdAt))
+      .limit(50);
+    
+    res.json(activities);
   } catch (error) {
-    console.error('Error fetching appointments:', error);
-    res.status(500).json({ error: 'Failed to fetch appointments' });
+    console.error('Activities fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch activities' });
   }
+});
+
+// Placeholder endpoints for future implementation
+router.get('/patient/appointments', portalAuth, async (req: any, res) => {
+  res.json([]);
 });
 
 router.get('/patient/messages', portalAuth, async (req: any, res) => {
-  try {
-    const messages = await db
-      .select()
-      .from(patientMessages)
-      .leftJoin(users, eq(patientMessages.healthCoachId, users.id))
-      .where(eq(patientMessages.patientId, req.user.contactId))
-      .orderBy(desc(patientMessages.createdAt));
-
-    const formattedMessages = messages.map(msg => ({
-      ...msg.patient_messages,
-      healthCoach: msg.users ? {
-        id: msg.users.id,
-        firstName: msg.users.firstName,
-        lastName: msg.users.lastName,
-      } : null,
-    }));
-
-    res.json(formattedMessages);
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
-});
-
-router.post('/patient/messages', portalAuth, async (req: any, res) => {
-  try {
-    const { subject, message, healthCoachId } = req.body;
-
-    const [newMessage] = await db
-      .insert(patientMessages)
-      .values({
-        patientId: req.user.contactId,
-        healthCoachId,
-        subject,
-        message,
-        sentByPatient: true,
-      })
-      .returning();
-
-    // Log activity
-    await db.insert(patientActivities).values({
-      patientId: req.user.contactId,
-      activityType: 'MESSAGE_SENT',
-      activityDescription: `Patient sent message: ${subject}`,
-    });
-
-    res.json(newMessage);
-  } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: 'Failed to send message' });
-  }
+  res.json([]);
 });
 
 router.get('/patient/notifications', portalAuth, async (req: any, res) => {
-  try {
-    const notifications = await db
-      .select()
-      .from(patientNotifications)
-      .where(eq(patientNotifications.patientId, req.user.contactId))
-      .orderBy(desc(patientNotifications.createdAt));
-
-    res.json(notifications);
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
-  }
-});
-
-router.put('/patient/notifications/:id/read', portalAuth, async (req: any, res) => {
-  try {
-    const notificationId = parseInt(req.params.id);
-    
-    await db
-      .update(patientNotifications)
-      .set({ isRead: true })
-      .where(
-        and(
-          eq(patientNotifications.id, notificationId),
-          eq(patientNotifications.patientId, req.user.contactId)
-        )
-      );
-
-    res.json({ message: 'Notification marked as read' });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({ error: 'Failed to mark notification as read' });
-  }
-});
-
-router.get('/patient/activities', portalAuth, async (req: any, res) => {
-  try {
-    const activities = await db
-      .select()
-      .from(patientActivities)
-      .where(eq(patientActivities.patientId, req.user.contactId))
-      .orderBy(desc(patientActivities.createdAt))
-      .limit(50);
-
-    res.json(activities);
-  } catch (error) {
-    console.error('Error fetching activities:', error);
-    res.status(500).json({ error: 'Failed to fetch activities' });
-  }
+  res.json([]);
 });
 
 export default router;

@@ -6,14 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
 import { Label } from "@/shared/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { usePortalAuth } from "../../hooks/usePortalAuth";
-import { Loader2, Heart } from 'lucide-react';
+import { Loader2, Heart, UserPlus } from 'lucide-react';
+import PortalSignup from "./portal-signup";
 
 export default function PortalLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showSignup, setShowSignup] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { login, isLoginLoading, loginError } = usePortalAuth();
+
+  if (showSignup) {
+    return <PortalSignup onBackToLogin={() => setShowSignup(false)} />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,9 +112,18 @@ export default function PortalLogin() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            <p>Need help accessing your account?</p>
-            <p className="mt-1">Contact your healthcare provider</p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Don't have an account?
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowSignup(true)}
+              className="w-full"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Create Account
+            </Button>
           </div>
         </CardContent>
       </Card>

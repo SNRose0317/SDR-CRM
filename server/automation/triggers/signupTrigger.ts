@@ -1,151 +1,195 @@
-import { storage } from "../storage";
-import { TriggerEvent, AutomationRule } from "../types";
-import { executeActions } from "../actions/actionExecutor";
+// Portal Signup Automation Trigger
+// This trigger handles automation when users sign up through the portal
 
-/**
- * Signup Trigger: Automatically creates a lead when a new user signs up
- * 
- * Trigger: Portal signup completion
- * Conditions: User has valid email, phone, and state
- * Actions: Create lead record with user information
- */
+import { AutomationTrigger, AutomationEventType, AutomationActionType, AutomationContext, AutomationResult } from '../types';
+import { ActionExecutor } from '../actions/actionExecutor';
+import { db } from '../../db';
+import { leads, tasks, users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+
 export class SignupTrigger {
-  private static instance: SignupTrigger;
-  
-  private constructor() {}
-  
-  static getInstance(): SignupTrigger {
-    if (!SignupTrigger.instance) {
-      SignupTrigger.instance = new SignupTrigger();
-    }
-    return SignupTrigger.instance;
+  private actionExecutor: ActionExecutor;
+
+  constructor() {
+    this.actionExecutor = new ActionExecutor();
   }
 
-  /**
-   * Processes a new user signup and creates a lead
-   */
-  async processSignup(signupData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    state: string;
-    password: string;
-  }): Promise<void> {
-    try {
-      // Create the automation rule for signup → lead conversion
-      const signupRule: AutomationRule = {
-        id: 'signup_to_lead',
-        name: 'Convert Signup to Lead',
-        object: 'User',
-        trigger: {
-          type: 'record_create',
-          event: 'user_signup'
+  // Default automation trigger for portal signup
+  static getDefaultTrigger(): AutomationTrigger {
+    return {
+      id: 'portal-signup-default',
+      name: 'Portal Signup - Create Lead',
+      description: 'Automatically creates a lead when a new user signs up through the portal',
+      eventType: AutomationEventType.PORTAL_SIGNUP,
+      isActive: true,
+      conditions: [
+        {
+          id: 'signup-condition-1',
+          field: 'role',
+          operator: 'equals',
+          value: 'Patient'
+        }
+      ],
+      actions: [
+        {
+          id: 'signup-action-1',
+          type: AutomationActionType.CREATE_LEAD,
+          parameters: {
+            status: 'New',
+            source: 'Portal Signup',
+            leadScore: 0,
+            notes: 'Lead created automatically from portal signup',
+            priority: 'medium'
+          },
+          order: 1
         },
-        conditions: [
-          {
-            field: 'email',
-            operator: 'not_empty',
-            value: null
+        {
+          id: 'signup-action-2',
+          type: AutomationActionType.CREATE_TASK,
+          parameters: {
+            title: 'Follow up with new portal signup',
+            description: 'Contact new lead from portal signup within 24 hours',
+            priority: 'high',
+            status: 'todo',
+            dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
           },
-          {
-            field: 'phone',
-            operator: 'not_empty', 
-            value: null
+          order: 2
+        },
+        {
+          id: 'signup-action-3',
+          type: AutomationActionType.LOG_ACTIVITY,
+          parameters: {
+            action: 'portal_signup_automation',
+            details: 'Portal signup automation triggered - lead and task created'
           },
-          {
-            field: 'state',
-            operator: 'not_empty',
-            value: null
-          }
-        ],
-        actions: [
-          {
-            type: 'create_lead',
-            delay: 0,
-            data: {
-              firstName: signupData.firstName,
-              lastName: signupData.lastName,
-              email: signupData.email,
-              phone: signupData.phone,
-              state: signupData.state,
-              status: 'New',
-              source: 'Portal Signup',
-              notes: `Lead created automatically from portal signup on ${new Date().toISOString()}`
-            }
-          },
-          {
-            type: 'create_activity_log',
-            delay: 0,
-            data: {
-              entityType: 'lead',
-              action: 'created',
-              details: 'Lead created from portal signup'
-            }
-          }
-        ]
+          order: 3
+        }
+      ],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+
+  // Execute the signup automation
+  async execute(context: AutomationContext): Promise<AutomationResult> {
+    try {
+      const trigger = SignupTrigger.getDefaultTrigger();
+      
+      // Check if conditions are met
+      if (!this.evaluateConditions(trigger.conditions, context)) {
+        return {
+          success: false,
+          message: 'Signup trigger conditions not met',
+          error: 'Conditions not satisfied'
+        };
+      }
+
+      // Execute actions in order
+      const results = [];
+      for (const action of trigger.actions) {
+        const result = await this.actionExecutor.execute(action, context);
+        results.push(result);
+        
+        if (!result.success) {
+          console.error(`Action ${action.id} failed:`, result.error);
+          // Continue with other actions even if one fails
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Signup automation completed successfully',
+        data: { actionResults: results }
       };
 
-      // Execute the automation rule
-      await this.executeRule(signupRule, signupData);
-      
-      console.log(`[SignupTrigger] Successfully processed signup for ${signupData.email}`);
-      
     } catch (error) {
-      console.error(`[SignupTrigger] Error processing signup for ${signupData.email}:`, error);
-      throw error;
+      console.error('Signup trigger execution error:', error);
+      return {
+        success: false,
+        message: 'Signup automation failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 
-  /**
-   * Executes the automation rule for signup conversion
-   */
-  private async executeRule(rule: AutomationRule, triggerData: any): Promise<void> {
-    // Evaluate conditions
-    const conditionsMet = await this.evaluateConditions(rule.conditions, triggerData);
-    
-    if (!conditionsMet) {
-      console.log(`[SignupTrigger] Conditions not met for rule: ${rule.name}`);
-      return;
+  // Evaluate trigger conditions
+  private evaluateConditions(conditions: any[], context: AutomationContext): boolean {
+    if (!conditions || conditions.length === 0) {
+      return true;
     }
 
-    // Execute actions in sequence
-    for (const action of rule.actions) {
-      await executeActions([action], triggerData);
-    }
-  }
-
-  /**
-   * Evaluates if all conditions are met
-   */
-  private async evaluateConditions(conditions: any[], data: any): Promise<boolean> {
     for (const condition of conditions) {
-      const fieldValue = data[condition.field];
+      const fieldValue = context.entityData[condition.field];
       
       switch (condition.operator) {
-        case 'not_empty':
-          if (!fieldValue || fieldValue.trim() === '') {
-            return false;
-          }
-          break;
         case 'equals':
-          if (fieldValue !== condition.value) {
-            return false;
-          }
+          if (fieldValue !== condition.value) return false;
           break;
-        case 'greater_than':
-          if (Number(fieldValue) <= Number(condition.value)) {
-            return false;
-          }
+        case 'not_equals':
+          if (fieldValue === condition.value) return false;
+          break;
+        case 'contains':
+          if (!fieldValue || !fieldValue.includes(condition.value)) return false;
+          break;
+        case 'exists':
+          if (!fieldValue) return false;
+          break;
+        case 'not_exists':
+          if (fieldValue) return false;
           break;
         default:
-          console.warn(`[SignupTrigger] Unknown condition operator: ${condition.operator}`);
-          break;
+          return false;
       }
     }
     
     return true;
   }
-}
 
-export const signupTrigger = SignupTrigger.getInstance();
+  // Get predefined templates for signup automation
+  static getTemplates() {
+    return [
+      {
+        id: 'portal-signup-basic',
+        name: 'Basic Portal Signup',
+        description: 'Creates lead and follow-up task for new portal signups',
+        category: 'portal_automation' as const,
+        trigger: SignupTrigger.getDefaultTrigger(),
+        isDefault: true
+      },
+      {
+        id: 'portal-signup-advanced',
+        name: 'Advanced Portal Signup',
+        description: 'Creates lead, assigns to SDR, creates welcome task, and sends notification',
+        category: 'portal_automation' as const,
+        trigger: {
+          ...SignupTrigger.getDefaultTrigger(),
+          name: 'Advanced Portal Signup Automation',
+          actions: [
+            ...SignupTrigger.getDefaultTrigger().actions,
+            {
+              id: 'signup-action-4',
+              type: AutomationActionType.ASSIGN_USER,
+              parameters: {
+                assignToRole: 'SDR',
+                assignmentType: 'round_robin'
+              },
+              order: 4
+            },
+            {
+              id: 'signup-action-5',
+              type: AutomationActionType.CREATE_NOTIFICATION,
+              parameters: {
+                title: 'New Portal Signup',
+                message: 'New user has signed up through the portal',
+                type: 'info',
+                targetRole: 'SDR'
+              },
+              order: 5
+            }
+          ]
+        },
+        isDefault: false
+      }
+    ];
+  }
+}

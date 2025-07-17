@@ -1,17 +1,22 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  serial,
+  text,
+  varchar,
+  integer,
+  timestamp,
+  boolean,
+  jsonb,
+  index,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["SDR", "Health Coach", "Admin", "Patient"]);
-export const leadStatusEnum = pgEnum("lead_status", [
-  "HHQ Started",
-  "HHQ Signed",
-  "Booking: Not Paid",
-  "Booking: Paid/Not Booked",
-  "Booking: Paid/Booked"
-]);
+export const userRoleEnum = pgEnum("user_role", ["sdr", "health_coach", "admin", "patient"]);
+export const leadStatusEnum = pgEnum("lead_status", ["New", "HHQ Started", "HHQ Signed", "Booking: Needs Scheduling", "Booking: Paid/ booked"]);
 export const contactStageEnum = pgEnum("contact_stage", [
   "Intake",
   "Initial Labs",
@@ -29,236 +34,251 @@ export const contactStageEnum = pgEnum("contact_stage", [
   "Third Medication Refill",
   "Restart Annual Process"
 ]);
-export const taskStatusEnum = pgEnum("task_status", ["Pending", "In Progress", "Completed"]);
-export const taskPriorityEnum = pgEnum("task_priority", ["Low", "Medium", "High"]);
-export const appointmentStatusEnum = pgEnum("appointment_status", ["Scheduled", "Confirmed", "Completed", "Cancelled", "No Show"]);
-export const patientActivityTypeEnum = pgEnum("patient_activity_type", [
-  "LOGIN",
-  "PROFILE_UPDATE",
-  "APPOINTMENT_BOOKED",
-  "APPOINTMENT_CANCELLED",
-  "MESSAGE_SENT",
-  "RECORD_ACCESSED",
-  "DOCUMENT_UPLOADED"
-]);
-export const patientNotificationTypeEnum = pgEnum("patient_notification_type", [
-  "APPOINTMENT_REMINDER",
-  "LAB_RESULTS_AVAILABLE",
-  "PRESCRIPTION_READY",
-  "MESSAGE_RECEIVED",
-  "STAGE_UPDATED",
-  "GENERAL_ANNOUNCEMENT"
-]);
+export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "completed", "cancelled"]);
+export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
+export const appointmentStatusEnum = pgEnum("appointment_status", ["scheduled", "confirmed", "completed", "cancelled", "no_show"]);
+
+// Session storage table (required for auth)
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
 
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  firstName: varchar("first_name", { length: 100 }),
-  lastName: varchar("last_name", { length: 100 }),
-  role: userRoleEnum("role").notNull(),
-  isActive: boolean("is_active").default(true),
-  contactId: integer("contact_id").references(() => contacts.id),
-  portalAccess: boolean("portal_access").default(false),
-  lastPortalLogin: timestamp("last_portal_login"),
+  email: varchar("email").unique().notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  role: userRoleEnum("role").notNull().default("patient"),
+  passwordHash: varchar("password_hash"),
+  profileImageUrl: varchar("profile_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const usersRelations = relations(users, ({ many }) => ({
+  assignedTasks: many(tasks),
+  assignedContacts: many(contacts),
+  activityLogs: many(activityLogs),
+  portalSessions: many(portalSessions),
+}));
 
 // Leads table
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
-  firstName: varchar("first_name", { length: 100 }).notNull(),
-  lastName: varchar("last_name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 20 }),
-  status: leadStatusEnum("status").notNull().default("HHQ Started"),
-  ownerId: integer("owner_id").references(() => users.id),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  state: varchar("state"),
+  status: leadStatusEnum("status").notNull().default("New"),
+  source: varchar("source"),
+  leadScore: integer("lead_score").default(0),
   notes: text("notes"),
+  healthCoachBookedWith: integer("health_coach_booked_with").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const leadsRelations = relations(leads, ({ one, many }) => ({
+  healthCoach: one(users, {
+    fields: [leads.healthCoachBookedWith],
+    references: [users.id],
+  }),
+  contacts: many(contacts),
+  tasks: many(tasks),
+  activityLogs: many(activityLogs),
+}));
 
 // Contacts table
 export const contacts = pgTable("contacts", {
   id: serial("id").primaryKey(),
-  firstName: varchar("first_name", { length: 100 }).notNull(),
-  lastName: varchar("last_name", { length: 100 }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
-  phone: varchar("phone", { length: 20 }),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
   stage: contactStageEnum("stage").notNull().default("Intake"),
   healthCoachId: integer("health_coach_id").references(() => users.id),
   leadId: integer("lead_id").references(() => leads.id),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const contactsRelations = relations(contacts, ({ one, many }) => ({
+  healthCoach: one(users, {
+    fields: [contacts.healthCoachId],
+    references: [users.id],
+  }),
+  lead: one(leads, {
+    fields: [contacts.leadId],
+    references: [leads.id],
+  }),
+  tasks: many(tasks),
+  appointments: many(appointments),
+  activityLogs: many(activityLogs),
+  portalSessions: many(portalSessions),
+}));
 
 // Tasks table
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
+  title: varchar("title").notNull(),
   description: text("description"),
-  priority: taskPriorityEnum("priority").notNull().default("Medium"),
-  status: taskStatusEnum("status").notNull().default("Pending"),
-  assignedToId: integer("assigned_to_id").references(() => users.id),
-  createdById: integer("created_by_id").references(() => users.id),
+  priority: taskPriorityEnum("priority").notNull().default("medium"),
+  status: taskStatusEnum("status").notNull().default("todo"),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  dueDate: timestamp("due_date"),
   leadId: integer("lead_id").references(() => leads.id),
   contactId: integer("contact_id").references(() => contacts.id),
-  dueDate: timestamp("due_date"),
-  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export const tasksRelations = relations(tasks, ({ one }) => ({
+  assignedUser: one(users, {
+    fields: [tasks.assignedTo],
+    references: [users.id],
+  }),
+  lead: one(leads, {
+    fields: [tasks.leadId],
+    references: [leads.id],
+  }),
+  contact: one(contacts, {
+    fields: [tasks.contactId],
+    references: [contacts.id],
+  }),
+}));
 
 // Appointments table
 export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
+  title: varchar("title").notNull(),
   description: text("description"),
-  scheduledAt: timestamp("scheduled_at").notNull(),
-  duration: integer("duration").default(30), // in minutes
-  status: appointmentStatusEnum("status").notNull().default("Scheduled"),
-  userId: integer("user_id").references(() => users.id),
-  leadId: integer("lead_id").references(() => leads.id),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  status: appointmentStatusEnum("status").notNull().default("scheduled"),
+  attendeeId: integer("attendee_id").references(() => users.id),
   contactId: integer("contact_id").references(() => contacts.id),
-  meetingLink: varchar("meeting_link", { length: 500 }),
+  location: varchar("location"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow()
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-// Activity Log table for tracking events
-export const activityLogs = pgTable("activity_logs", {
-  id: serial("id").primaryKey(),
-  entityType: varchar("entity_type", { length: 50 }).notNull(), // 'lead', 'contact', 'task', 'appointment'
-  entityId: integer("entity_id").notNull(),
-  action: varchar("action", { length: 100 }).notNull(),
-  details: text("details"),
-  userId: integer("user_id").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-// Portal-specific tables
-export const patientSessions = pgTable("patient_sessions", {
-  id: serial("id").primaryKey(),
-  patientId: integer("patient_id").references(() => contacts.id),
-  sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
-  expiresAt: timestamp("expires_at").notNull(),
-  ipAddress: varchar("ip_address", { length: 45 }),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const patientActivities = pgTable("patient_activities", {
-  id: serial("id").primaryKey(),
-  patientId: integer("patient_id").references(() => contacts.id),
-  activityType: patientActivityTypeEnum("activity_type").notNull(),
-  activityDescription: text("activity_description"),
-  metadata: text("metadata"), // JSON string
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const patientMessages = pgTable("patient_messages", {
-  id: serial("id").primaryKey(),
-  patientId: integer("patient_id").references(() => contacts.id),
-  healthCoachId: integer("health_coach_id").references(() => users.id),
-  subject: varchar("subject", { length: 255 }).notNull(),
-  message: text("message").notNull(),
-  isRead: boolean("is_read").default(false),
-  sentByPatient: boolean("sent_by_patient").default(true),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const patientNotifications = pgTable("patient_notifications", {
-  id: serial("id").primaryKey(),
-  patientId: integer("patient_id").references(() => contacts.id),
-  type: patientNotificationTypeEnum("type").notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  message: text("message").notNull(),
-  isRead: boolean("is_read").default(false),
-  actionUrl: varchar("action_url", { length: 255 }),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  ownedLeads: many(leads),
-  assignedTasks: many(tasks, { relationName: "assignedTasks" }),
-  createdTasks: many(tasks, { relationName: "createdTasks" }),
-  contacts: many(contacts),
-  appointments: many(appointments),
-  activityLogs: many(activityLogs)
-}));
-
-export const leadsRelations = relations(leads, ({ one, many }) => ({
-  owner: one(users, { fields: [leads.ownerId], references: [users.id] }),
-  contact: one(contacts, { fields: [leads.id], references: [contacts.leadId] }),
-  tasks: many(tasks),
-  appointments: many(appointments)
-}));
-
-export const contactsRelations = relations(contacts, ({ one, many }) => ({
-  healthCoach: one(users, { fields: [contacts.healthCoachId], references: [users.id] }),
-  lead: one(leads, { fields: [contacts.leadId], references: [leads.id] }),
-  tasks: many(tasks),
-  appointments: many(appointments)
-}));
-
-export const tasksRelations = relations(tasks, ({ one }) => ({
-  assignedTo: one(users, { fields: [tasks.assignedToId], references: [users.id], relationName: "assignedTasks" }),
-  createdBy: one(users, { fields: [tasks.createdById], references: [users.id], relationName: "createdTasks" }),
-  lead: one(leads, { fields: [tasks.leadId], references: [leads.id] }),
-  contact: one(contacts, { fields: [tasks.contactId], references: [contacts.id] })
-}));
 
 export const appointmentsRelations = relations(appointments, ({ one }) => ({
-  user: one(users, { fields: [appointments.userId], references: [users.id] }),
-  lead: one(leads, { fields: [appointments.leadId], references: [leads.id] }),
-  contact: one(contacts, { fields: [appointments.contactId], references: [contacts.id] })
+  attendee: one(users, {
+    fields: [appointments.attendeeId],
+    references: [users.id],
+  }),
+  contact: one(contacts, {
+    fields: [appointments.contactId],
+    references: [contacts.id],
+  }),
 }));
+
+// Activity logs table
+export const activityLogs = pgTable("activity_logs", {
+  id: serial("id").primaryKey(),
+  entityType: varchar("entity_type").notNull(),
+  entityId: integer("entity_id"),
+  userId: integer("user_id").references(() => users.id),
+  action: varchar("action").notNull(),
+  details: text("details"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
-  user: one(users, { fields: [activityLogs.userId], references: [users.id] })
+  user: one(users, {
+    fields: [activityLogs.userId],
+    references: [users.id],
+  }),
+  lead: one(leads, {
+    fields: [activityLogs.entityId],
+    references: [leads.id],
+  }),
+  contact: one(contacts, {
+    fields: [activityLogs.entityId],
+    references: [contacts.id],
+  }),
 }));
 
-export const patientSessionsRelations = relations(patientSessions, ({ one }) => ({
-  patient: one(contacts, { fields: [patientSessions.patientId], references: [contacts.id] })
-}));
-
-export const patientActivitiesRelations = relations(patientActivities, ({ one }) => ({
-  patient: one(contacts, { fields: [patientActivities.patientId], references: [contacts.id] })
-}));
-
-export const patientMessagesRelations = relations(patientMessages, ({ one }) => ({
-  patient: one(contacts, { fields: [patientMessages.patientId], references: [contacts.id] }),
-  healthCoach: one(users, { fields: [patientMessages.healthCoachId], references: [users.id] })
-}));
-
-export const patientNotificationsRelations = relations(patientNotifications, ({ one }) => ({
-  patient: one(contacts, { fields: [patientNotifications.patientId], references: [contacts.id] })
-}));
-
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertContactSchema = createInsertSchema(contacts).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, createdAt: true, updatedAt: true, completedAt: true }).extend({
-  dueDate: z.string().optional().transform((str) => str ? new Date(str) : undefined)
+// Portal sessions table for patient portal authentication
+export const portalSessions = pgTable("portal_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  contactId: integer("contact_id").references(() => contacts.id),
+  sessionToken: varchar("session_token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
-export const insertAppointmentSchema = createInsertSchema(appointments).omit({ id: true, createdAt: true, updatedAt: true }).extend({
-  scheduledAt: z.string().transform((str) => new Date(str))
-});
-export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
 
-// Portal insert schemas
-export const insertPatientSessionSchema = createInsertSchema(patientSessions).omit({ id: true, createdAt: true });
-export const insertPatientActivitySchema = createInsertSchema(patientActivities).omit({ id: true, createdAt: true });
-export const insertPatientMessageSchema = createInsertSchema(patientMessages).omit({ id: true, createdAt: true });
-export const insertPatientNotificationSchema = createInsertSchema(patientNotifications).omit({ id: true, createdAt: true });
+export const portalSessionsRelations = relations(portalSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [portalSessions.userId],
+    references: [users.id],
+  }),
+  contact: one(contacts, {
+    fields: [portalSessions.contactId],
+    references: [contacts.id],
+  }),
+}));
+
+// Insert schemas for validation
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContactSchema = createInsertSchema(contacts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaskSchema = createInsertSchema(tasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  dueDate: z.string().transform((val) => new Date(val)).optional(),
+});
+
+export const insertAppointmentSchema = createInsertSchema(appointments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  startTime: z.string().transform((val) => new Date(val)),
+  endTime: z.string().transform((val) => new Date(val)),
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPortalSessionSchema = createInsertSchema(portalSessions).omit({
+  id: true,
+  createdAt: true,
+});
 
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpsertUser = typeof users.$inferInsert;
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Contact = typeof contacts.$inferSelect;
@@ -269,13 +289,17 @@ export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type PortalSession = typeof portalSessions.$inferSelect;
+export type InsertPortalSession = z.infer<typeof insertPortalSessionSchema>;
 
-// Portal types
-export type PatientSession = typeof patientSessions.$inferSelect;
-export type InsertPatientSession = z.infer<typeof insertPatientSessionSchema>;
-export type PatientActivity = typeof patientActivities.$inferSelect;
-export type InsertPatientActivity = z.infer<typeof insertPatientActivitySchema>;
-export type PatientMessage = typeof patientMessages.$inferSelect;
-export type InsertPatientMessage = z.infer<typeof insertPatientMessageSchema>;
-export type PatientNotification = typeof patientNotifications.$inferSelect;
-export type InsertPatientNotification = z.infer<typeof insertPatientNotificationSchema>;
+// Signup schema for portal registration
+export const signupSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  state: z.string().min(1, "State is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+export type SignupData = z.infer<typeof signupSchema>;

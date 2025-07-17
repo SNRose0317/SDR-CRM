@@ -1,117 +1,215 @@
-# Automation Rules Engine
+# Automation Framework
 
-This directory contains the automation rules engine for the HealthCRM system. The engine follows a three-part structure for every rule:
+This directory contains the automation framework for the HealthCRM system. The framework provides a comprehensive system for creating, managing, and executing automated workflows triggered by various events in the system.
 
 ## Architecture
 
-### 1. Triggers (The "If")
-- **Record Creation**: New Lead, Contact, Task, or Appointment created
-- **Record Updates**: Specific field changes to specific values
-- **Time-Based Events**: Date/time-based triggers with delays
+### Core Components
 
-### 2. Conditions (The "Only If")
-- Additional criteria that must be met for the automation to run
-- Can combine multiple conditions with AND/OR logic
-- Field value comparisons, date ranges, user roles, etc.
+1. **AutomationManager** (`automationManager.ts`)
+   - Central hub for managing all automation triggers
+   - Handles trigger registration, execution, and lifecycle management
+   - Provides singleton instance for application-wide access
 
-### 3. Actions (The "Then That")
-- **Field Updates**: Change values on current or related records
-- **Record Creation**: Create new records (Tasks, Appointments, etc.)
-- **Task Assignment**: Assign tasks to users or roles
-- **Email Automation**: Send templated emails
-- **Notifications**: In-app or external notifications
-- **Time Delays**: Wait periods before executing next action
+2. **Trigger Types** (`types.ts`)
+   - Defines all interfaces and types for the automation system
+   - Includes event types, action types, and result structures
+   - Provides type safety across the entire framework
 
-## Core Components
+3. **Trigger Handlers** (`triggers/`)
+   - Individual classes for handling specific trigger types
+   - Currently includes `SignupTrigger` for portal signup automation
+   - Each trigger can have multiple templates and configurations
 
-### TriggerEngine
-- Listens for database events (create, update, delete)
-- Evaluates trigger conditions
-- Queues actions for execution
+4. **Action Executor** (`actions/actionExecutor.ts`)
+   - Handles execution of automation actions
+   - Supports various action types: create tasks, send emails, log activities, etc.
+   - Provides error handling and result reporting
 
-### ConditionEvaluator
-- Processes rule conditions
-- Supports complex logic (AND, OR, NOT)
-- Field comparison operators (equals, greater than, contains, etc.)
+## Current Implementation
 
-### ActionExecutor
-- Processes queued actions
-- Supports action sequencing and delays
-- Error handling and retry logic
+### Portal Signup Automation
 
-## Future Workflow Manager Requirements
+When a user signs up through the portal:
 
-The automation system is designed to support a future UI-based workflow manager with:
+1. **Trigger**: `AutomationEventType.PORTAL_SIGNUP`
+2. **Conditions**: User role equals 'Patient'
+3. **Actions**:
+   - Create a lead with status 'New' and source 'Portal Signup'
+   - Create a follow-up task assigned to available SDR
+   - Log activity for audit trail
 
-1. **Visual Rule Builder**: Drag-and-drop interface for creating automation rules
-2. **Time Delay Configuration**: Visual time delay settings with units (minutes, hours, days)
-3. **Template Management**: Email and notification template editor
-4. **Rule Testing**: Test automation rules with sample data
-5. **Activity Monitoring**: Dashboard showing rule execution history
-6. **Performance Analytics**: Metrics on rule effectiveness and execution times
+### Supported Event Types
 
-## Implementation Status
+- `USER_SIGNUP` - User registration events
+- `LEAD_CREATED` - New lead creation
+- `LEAD_STATUS_CHANGED` - Lead status updates
+- `CONTACT_CREATED` - New contact creation
+- `TASK_CREATED` - New task creation
+- `APPOINTMENT_SCHEDULED` - Appointment scheduling
+- `PORTAL_SIGNUP` - Portal user registration
 
-### ✅ Completed
-- Basic trigger system structure
-- Lead signup automation (signup → create lead)
+### Supported Action Types
 
-### 🔄 In Progress
-- Condition evaluation system
-- Action execution framework
+- `CREATE_LEAD` - Create new leads
+- `CREATE_TASK` - Create tasks with assignments
+- `UPDATE_STATUS` - Update entity status
+- `ASSIGN_USER` - Assign entities to users
+- `LOG_ACTIVITY` - Log system activities
+- `CREATE_NOTIFICATION` - Create system notifications
+- `SEND_EMAIL` - Send automated emails
+- `SEND_SMS` - Send SMS messages
+- `WEBHOOK` - Trigger external webhooks
 
-### 📋 Planned
-- Time-based triggers
-- Email automation
-- Complex condition logic
-- Rule management API
-- Workflow manager UI
+## Usage Examples
 
-## Example Rule: Lead Conversion
+### Triggering Portal Signup Automation
 
-```javascript
-{
-  name: "Lead Conversion on Booking",
-  object: "Lead",
-  trigger: {
-    type: "record_update",
-    field: "status",
-    value: "Booking: Paid/ booked"
-  },
+```typescript
+import { automationManager } from './automation/automationManager';
+
+// Trigger automation when user signs up
+const results = await automationManager.triggerPortalSignup({
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'john@example.com',
+  phone: '555-1234',
+  state: 'CA',
+  role: 'Patient'
+}, userId);
+
+// Check results
+results.forEach(result => {
+  if (result.success) {
+    console.log('Automation succeeded:', result.message);
+  } else {
+    console.error('Automation failed:', result.error);
+  }
+});
+```
+
+### Creating Custom Triggers
+
+```typescript
+import { AutomationTrigger, AutomationEventType, AutomationActionType } from './types';
+
+const customTrigger: AutomationTrigger = {
+  id: 'custom-trigger-1',
+  name: 'Custom Lead Follow-up',
+  description: 'Send follow-up email 24 hours after lead creation',
+  eventType: AutomationEventType.LEAD_CREATED,
+  isActive: true,
   conditions: [
     {
-      field: "leadScore",
-      operator: "greater_than",
-      value: 80
+      id: 'condition-1',
+      field: 'source',
+      operator: 'equals',
+      value: 'Website'
     }
   ],
   actions: [
     {
-      type: "convert_lead",
-      delay: 0
-    },
-    {
-      type: "update_field",
-      target: "new_contact",
-      field: "stage",
-      value: "Intake",
-      delay: 0
-    },
-    {
-      type: "create_task",
-      assignTo: "contact_owner",
-      subject: "Schedule Initial Intake Call",
-      dueDate: "2_business_days",
-      delay: 0
-    },
-    {
-      type: "send_notification",
-      to: "contact_owner",
-      template: "new_contact_assigned",
-      delay: 0
+      id: 'action-1',
+      type: AutomationActionType.SEND_EMAIL,
+      parameters: {
+        template: 'lead-follow-up',
+        delay: 1440 // 24 hours in minutes
+      },
+      order: 1
     }
-  ]
-}
+  ],
+  createdAt: new Date(),
+  updatedAt: new Date()
+};
+
+automationManager.setTrigger(customTrigger);
 ```
 
-This framework provides the foundation for building a comprehensive workflow automation system that can handle complex healthcare CRM processes with proper timing and sequencing.
+## Templates
+
+The framework includes predefined templates for common automation scenarios:
+
+- **Basic Portal Signup**: Creates lead + follow-up task
+- **Advanced Portal Signup**: Creates lead + task + assigns SDR + notifications
+
+Access templates via:
+```typescript
+const templates = automationManager.getTemplates();
+```
+
+## Future Enhancements
+
+### Planned Features
+
+1. **Workflow Builder UI**
+   - Visual drag-and-drop interface for creating automations
+   - Template library with pre-built workflows
+   - Real-time testing and debugging tools
+
+2. **Advanced Conditions**
+   - Complex condition logic with AND/OR operators
+   - Time-based conditions (business hours, weekends)
+   - Data-driven conditions (lead score thresholds)
+
+3. **Enhanced Actions**
+   - Integration with external services (CRM, email providers)
+   - Conditional branching within workflows
+   - Multi-step approval processes
+
+4. **Monitoring & Analytics**
+   - Automation performance metrics
+   - Success/failure tracking
+   - A/B testing capabilities
+
+### Extension Points
+
+1. **Custom Triggers**: Add new trigger types by extending the framework
+2. **Custom Actions**: Implement new action types in the ActionExecutor
+3. **External Integrations**: Connect with third-party services
+4. **AI Integration**: Add intelligent automation with ML-based decisions
+
+## Configuration
+
+### Environment Variables
+
+- `AUTOMATION_ENABLED`: Enable/disable automation system (default: true)
+- `AUTOMATION_DEBUG`: Enable debug logging (default: false)
+- `AUTOMATION_MAX_RETRIES`: Maximum retry attempts for failed actions (default: 3)
+
+### Database Requirements
+
+The automation system requires these database tables:
+- `users` - For user assignments and role-based actions
+- `leads` - For lead creation and management
+- `tasks` - For task creation and assignment
+- `activity_logs` - For audit trail and activity logging
+
+## Best Practices
+
+1. **Error Handling**: Always handle automation failures gracefully
+2. **Performance**: Use appropriate delays and batch processing for large operations
+3. **Testing**: Test automation workflows thoroughly before deployment
+4. **Monitoring**: Monitor automation success rates and performance metrics
+5. **Security**: Validate all automation inputs and outputs
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Automation Not Triggering**: Check if trigger is active and conditions are met
+2. **Action Failures**: Verify database permissions and data integrity
+3. **Performance Issues**: Monitor automation execution times and optimize conditions
+4. **Debug Logging**: Enable `AUTOMATION_DEBUG` for detailed execution logs
+
+### Debug Commands
+
+```typescript
+// Get automation statistics
+const stats = automationManager.getStats();
+
+// Get all triggers
+const triggers = automationManager.getAllTriggers();
+
+// Get specific trigger
+const trigger = automationManager.getTrigger('trigger-id');
+```
