@@ -1,0 +1,483 @@
+import {
+  users,
+  leads,
+  contacts,
+  tasks,
+  appointments,
+  activityLogs,
+  type User,
+  type InsertUser,
+  type Lead,
+  type InsertLead,
+  type Contact,
+  type InsertContact,
+  type Task,
+  type InsertTask,
+  type Appointment,
+  type InsertAppointment,
+  type ActivityLog,
+  type InsertActivityLog
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, or, like, count, sql } from "drizzle-orm";
+
+export interface IStorage {
+  // User operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  getUsers(): Promise<User[]>;
+  
+  // Lead operations
+  getLeads(filters?: any): Promise<Lead[]>;
+  getLead(id: number): Promise<Lead | undefined>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  updateLead(id: number, lead: Partial<InsertLead>): Promise<Lead>;
+  deleteLead(id: number): Promise<void>;
+  getLeadStats(): Promise<any>;
+  
+  // Contact operations
+  getContacts(filters?: any): Promise<Contact[]>;
+  getContact(id: number): Promise<Contact | undefined>;
+  createContact(contact: InsertContact): Promise<Contact>;
+  updateContact(id: number, contact: Partial<InsertContact>): Promise<Contact>;
+  deleteContact(id: number): Promise<void>;
+  getContactStats(): Promise<any>;
+  
+  // Task operations
+  getTasks(filters?: any): Promise<Task[]>;
+  getTask(id: number): Promise<Task | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: number, task: Partial<InsertTask>): Promise<Task>;
+  deleteTask(id: number): Promise<void>;
+  getTaskStats(): Promise<any>;
+  
+  // Appointment operations
+  getAppointments(filters?: any): Promise<Appointment[]>;
+  getAppointment(id: number): Promise<Appointment | undefined>;
+  createAppointment(appointment: InsertAppointment): Promise<Appointment>;
+  updateAppointment(id: number, appointment: Partial<InsertAppointment>): Promise<Appointment>;
+  deleteAppointment(id: number): Promise<void>;
+  
+  // Activity log operations
+  createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
+  getActivityLogs(filters?: any): Promise<ActivityLog[]>;
+  
+  // Stats operations
+  getDashboardStats(): Promise<any>;
+}
+
+export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0] || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0] || undefined;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(userData).returning();
+    return result[0];
+  }
+
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
+    const result = await db
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  // Lead operations
+  async getLeads(filters?: any): Promise<Lead[]> {
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(leads.status, filters.status));
+    }
+    if (filters?.ownerId) {
+      conditions.push(eq(leads.ownerId, filters.ownerId));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          like(leads.firstName, `%${filters.search}%`),
+          like(leads.lastName, `%${filters.search}%`),
+          like(leads.email, `%${filters.search}%`)
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt));
+    }
+    
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  }
+
+  async getLead(id: number): Promise<Lead | undefined> {
+    const result = await db.select().from(leads).where(eq(leads.id, id));
+    return result[0] || undefined;
+  }
+
+  async createLead(leadData: InsertLead): Promise<Lead> {
+    const result = await db.insert(leads).values(leadData).returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: result[0].id,
+      action: 'created',
+      details: `Lead ${result[0].firstName} ${result[0].lastName} created`,
+      userId: leadData.ownerId
+    });
+    
+    return result[0];
+  }
+
+  async updateLead(id: number, leadData: Partial<InsertLead>): Promise<Lead> {
+    const result = await db
+      .update(leads)
+      .set({ ...leadData, updatedAt: new Date() })
+      .where(eq(leads.id, id))
+      .returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: id,
+      action: 'updated',
+      details: `Lead updated`,
+      userId: leadData.ownerId || null
+    });
+    
+    return result[0];
+  }
+
+  async deleteLead(id: number): Promise<void> {
+    await db.delete(leads).where(eq(leads.id, id));
+  }
+
+  async getLeadStats(): Promise<any> {
+    const statuses = ['HHQ Started', 'HHQ Signed', 'Booking: Not Paid', 'Booking: Paid/Not Booked', 'Booking: Paid/Booked'];
+    const stats = await Promise.all(
+      statuses.map(async (status) => {
+        const result = await db.select({ count: count() }).from(leads).where(eq(leads.status, status as any));
+        return { status, count: result[0].count };
+      })
+    );
+    return stats;
+  }
+
+  // Contact operations
+  async getContacts(filters?: any): Promise<Contact[]> {
+    const conditions = [];
+    
+    if (filters?.stage) {
+      conditions.push(eq(contacts.stage, filters.stage));
+    }
+    if (filters?.healthCoachId) {
+      conditions.push(eq(contacts.healthCoachId, filters.healthCoachId));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          like(contacts.firstName, `%${filters.search}%`),
+          like(contacts.lastName, `%${filters.search}%`),
+          like(contacts.email, `%${filters.search}%`)
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(contacts).where(and(...conditions)).orderBy(desc(contacts.createdAt));
+    }
+    
+    return await db.select().from(contacts).orderBy(desc(contacts.createdAt));
+  }
+
+  async getContact(id: number): Promise<Contact | undefined> {
+    const result = await db.select().from(contacts).where(eq(contacts.id, id));
+    return result[0] || undefined;
+  }
+
+  async createContact(contactData: InsertContact): Promise<Contact> {
+    const result = await db.insert(contacts).values(contactData).returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'contact',
+      entityId: result[0].id,
+      action: 'created',
+      details: `Contact ${result[0].firstName} ${result[0].lastName} created`,
+      userId: contactData.healthCoachId
+    });
+    
+    return result[0];
+  }
+
+  async updateContact(id: number, contactData: Partial<InsertContact>): Promise<Contact> {
+    const result = await db
+      .update(contacts)
+      .set({ ...contactData, updatedAt: new Date() })
+      .where(eq(contacts.id, id))
+      .returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'contact',
+      entityId: id,
+      action: 'updated',
+      details: `Contact updated`,
+      userId: contactData.healthCoachId || null
+    });
+    
+    return result[0];
+  }
+
+  async deleteContact(id: number): Promise<void> {
+    await db.delete(contacts).where(eq(contacts.id, id));
+  }
+
+  async getContactStats(): Promise<any> {
+    const stages = [
+      'Intake', 'Health Assessment', 'Goal Setting', 'Initial Consultation',
+      'Program Design', 'Onboarding', 'Active Program', 'Progress Review',
+      'Adjustment', 'Maintenance', 'Follow-up', 'Renewal Discussion',
+      'Renewal', 'Graduation', 'Annual Process'
+    ];
+    
+    const stats = await Promise.all(
+      stages.map(async (stage) => {
+        const result = await db.select({ count: count() }).from(contacts).where(eq(contacts.stage, stage as any));
+        return { stage, count: result[0].count };
+      })
+    );
+    return stats;
+  }
+
+  // Task operations
+  async getTasks(filters?: any): Promise<Task[]> {
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(tasks.status, filters.status));
+    }
+    if (filters?.assignedToId) {
+      conditions.push(eq(tasks.assignedToId, filters.assignedToId));
+    }
+    if (filters?.priority) {
+      conditions.push(eq(tasks.priority, filters.priority));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          like(tasks.title, `%${filters.search}%`),
+          like(tasks.description, `%${filters.search}%`)
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(tasks).where(and(...conditions)).orderBy(desc(tasks.createdAt));
+    }
+    
+    return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  }
+
+  async getTask(id: number): Promise<Task | undefined> {
+    const result = await db.select().from(tasks).where(eq(tasks.id, id));
+    return result[0] || undefined;
+  }
+
+  async createTask(taskData: InsertTask): Promise<Task> {
+    const result = await db.insert(tasks).values(taskData).returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'task',
+      entityId: result[0].id,
+      action: 'created',
+      details: `Task "${result[0].title}" created`,
+      userId: taskData.assignedToId
+    });
+    
+    return result[0];
+  }
+
+  async updateTask(id: number, taskData: Partial<InsertTask>): Promise<Task> {
+    const updateData = { ...taskData, updatedAt: new Date() };
+    
+    // If task is being completed, set completedAt
+    if (taskData.status === 'Completed') {
+      (updateData as any).completedAt = new Date();
+    }
+    
+    const result = await db
+      .update(tasks)
+      .set(updateData)
+      .where(eq(tasks.id, id))
+      .returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'task',
+      entityId: id,
+      action: 'updated',
+      details: `Task updated`,
+      userId: taskData.assignedToId || null
+    });
+    
+    return result[0];
+  }
+
+  async deleteTask(id: number): Promise<void> {
+    await db.delete(tasks).where(eq(tasks.id, id));
+  }
+
+  async getTaskStats(): Promise<any> {
+    const statuses = ['Pending', 'In Progress', 'Completed'];
+    const priorities = ['Low', 'Medium', 'High'];
+    
+    const [statusStats, priorityStats] = await Promise.all([
+      Promise.all(
+        statuses.map(async (status) => {
+          const result = await db.select({ count: count() }).from(tasks).where(eq(tasks.status, status as any));
+          return { status, count: result[0].count };
+        })
+      ),
+      Promise.all(
+        priorities.map(async (priority) => {
+          const result = await db.select({ count: count() }).from(tasks).where(eq(tasks.priority, priority as any));
+          return { priority, count: result[0].count };
+        })
+      )
+    ]);
+    
+    return { statusStats, priorityStats };
+  }
+
+  // Appointment operations
+  async getAppointments(filters?: any): Promise<Appointment[]> {
+    const conditions = [];
+    
+    if (filters?.status) {
+      conditions.push(eq(appointments.status, filters.status));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(appointments.userId, filters.userId));
+    }
+    if (filters?.leadId) {
+      conditions.push(eq(appointments.leadId, filters.leadId));
+    }
+    if (filters?.contactId) {
+      conditions.push(eq(appointments.contactId, filters.contactId));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.scheduledAt));
+    }
+    
+    return await db.select().from(appointments).orderBy(desc(appointments.scheduledAt));
+  }
+
+  async getAppointment(id: number): Promise<Appointment | undefined> {
+    const result = await db.select().from(appointments).where(eq(appointments.id, id));
+    return result[0] || undefined;
+  }
+
+  async createAppointment(appointmentData: InsertAppointment): Promise<Appointment> {
+    const result = await db.insert(appointments).values(appointmentData).returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'appointment',
+      entityId: result[0].id,
+      action: 'created',
+      details: `Appointment "${result[0].title}" scheduled`,
+      userId: appointmentData.userId
+    });
+    
+    return result[0];
+  }
+
+  async updateAppointment(id: number, appointmentData: Partial<InsertAppointment>): Promise<Appointment> {
+    const result = await db
+      .update(appointments)
+      .set({ ...appointmentData, updatedAt: new Date() })
+      .where(eq(appointments.id, id))
+      .returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'appointment',
+      entityId: id,
+      action: 'updated',
+      details: `Appointment updated`,
+      userId: appointmentData.userId || null
+    });
+    
+    return result[0];
+  }
+
+  async deleteAppointment(id: number): Promise<void> {
+    await db.delete(appointments).where(eq(appointments.id, id));
+  }
+
+  // Activity log operations
+  async createActivityLog(logData: InsertActivityLog): Promise<ActivityLog> {
+    const result = await db.insert(activityLogs).values(logData).returning();
+    return result[0];
+  }
+
+  async getActivityLogs(filters?: any): Promise<ActivityLog[]> {
+    const conditions = [];
+    
+    if (filters?.entityType) {
+      conditions.push(eq(activityLogs.entityType, filters.entityType));
+    }
+    if (filters?.entityId) {
+      conditions.push(eq(activityLogs.entityId, filters.entityId));
+    }
+    if (filters?.userId) {
+      conditions.push(eq(activityLogs.userId, filters.userId));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(activityLogs).where(and(...conditions)).orderBy(desc(activityLogs.createdAt));
+    }
+    
+    return await db.select().from(activityLogs).orderBy(desc(activityLogs.createdAt));
+  }
+
+  // Stats operations
+  async getDashboardStats(): Promise<any> {
+    const [totalUsers, totalLeads, totalContacts, totalTasks, totalAppointments] = await Promise.all([
+      db.select({ count: count() }).from(users),
+      db.select({ count: count() }).from(leads),
+      db.select({ count: count() }).from(contacts),
+      db.select({ count: count() }).from(tasks),
+      db.select({ count: count() }).from(appointments)
+    ]);
+
+    return {
+      totalUsers: totalUsers[0].count,
+      totalLeads: totalLeads[0].count,
+      totalContacts: totalContacts[0].count,
+      totalTasks: totalTasks[0].count,
+      totalAppointments: totalAppointments[0].count
+    };
+  }
+}
+
+export const storage = new DatabaseStorage();
