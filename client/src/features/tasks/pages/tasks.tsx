@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import DataTable from "@/shared/components/data-display/data-table";
-import TaskForm from "@/shared/components/composite/forms/task-form";
+import TaskForm from "@/features/tasks/components/task-form";
 import { Plus, Edit, Trash2, Check, MoreHorizontal, Clock, AlertCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

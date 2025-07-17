@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import DataTable from "@/shared/components/data-display/data-table";
-import AppointmentForm from "@/shared/components/composite/forms/appointment-form";
+import AppointmentForm from "@/features/appointments/components/appointment-form";
 import { Plus, Edit, Trash2, Calendar, MoreHorizontal, Clock, CheckCircle, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import DataTable from "@/shared/components/data-display/data-table";
-import UserForm from "@/shared/components/composite/forms/user-form";
+import UserForm from "@/features/users/components/user-form";
 import { Plus, Edit, UserX, MoreHorizontal, User as UserIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
