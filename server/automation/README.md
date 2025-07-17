@@ -137,29 +137,55 @@ Access templates via:
 const templates = automationManager.getTemplates();
 ```
 
-## Future Enhancements
+## Business-Focused Workflow Builder
 
-### Planned Features
+### Core Business Components
 
-1. **Workflow Builder UI**
-   - Visual drag-and-drop interface for creating automations
-   - Template library with pre-built workflows
-   - Real-time testing and debugging tools
+1. **User Journey Management**
+   - User Types: Portal User, Lead, Contact, System User
+   - Status Flows: New → HHQ Started → HHQ Signed → Booking stages
+   - Role-based assignments: SDR, Health Coach, Admin
+   - Business-friendly terminology throughout
 
-2. **Advanced Conditions**
-   - Complex condition logic with AND/OR operators
-   - Time-based conditions (business hours, weekends)
-   - Data-driven conditions (lead score thresholds)
+2. **Intuitive Workflow Creation**
+   - Drag-and-drop interface with business terminology
+   - Pre-built templates for common scenarios
+   - Role-based workflow recommendations
+   - Visual status flow management
 
-3. **Enhanced Actions**
-   - Integration with external services (CRM, email providers)
-   - Conditional branching within workflows
-   - Multi-step approval processes
+3. **Business Action Library**
+   - Assign to team members by role
+   - Send notifications (Slack, email, SMS)
+   - Create and assign tasks
+   - Update customer status
+   - Schedule appointments
+   - Log activities for compliance
 
-4. **Monitoring & Analytics**
-   - Automation performance metrics
-   - Success/failure tracking
-   - A/B testing capabilities
+4. **Smart Triggers**
+   - Status change triggers
+   - Time-based triggers (delays, schedules)
+   - User action triggers
+   - System event triggers
+   - Business rule conditions
+
+### Manager-Friendly Features
+
+1. **Role-Based Templates**
+   - SDR Manager: Lead assignment and follow-up workflows
+   - Health Coach Manager: Patient journey automation
+   - Admin: System-wide automation management
+
+2. **Visual Workflow Designer**
+   - Business process mapping interface
+   - Clear visual connections between steps
+   - Condition branching with business logic
+   - Time delays with business-friendly units
+
+3. **Real-Time Execution**
+   - Workflows execute automatically when triggered
+   - Success/failure notifications
+   - Performance analytics dashboard
+   - Compliance audit trails
 
 ### Extension Points
 

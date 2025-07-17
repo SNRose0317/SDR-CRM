@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { WorkflowBuilder } from '@/components/workflow-builder/WorkflowBuilder';
+import { BusinessNodePalette } from '@/components/workflow-builder/BusinessNodePalette';
+import { BusinessWorkflowCanvas } from '@/components/workflow-builder/BusinessWorkflowCanvas';
 import { WorkflowDefinition } from '@/components/workflow-builder/types';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/components/ui/card';
