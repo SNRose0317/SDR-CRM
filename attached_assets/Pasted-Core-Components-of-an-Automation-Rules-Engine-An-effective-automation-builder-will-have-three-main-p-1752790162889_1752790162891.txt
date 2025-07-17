@@ -1,0 +1,47 @@
+Core Components of an Automation Rules Engine
+An effective automation builder will have three main parts for every rule you create:
+1. The Trigger (The "If")
+This is the specific event that initiates the automation. Your CRM prototype must allow you to define triggers based on:
+Record Creation: A new Lead, Contact, Task, or Appointment is created.
+Record Updates: A record is modified. This is the most critical one for your use case. The tool must be smart enough to trigger an action only when a specific field changes to a specific value.
+Example: Trigger when a Lead record's Status field is changed to "HHQ signed (completed)". It shouldn't trigger if any other field is changed.
+Time-Based Events: The trigger is based on a date or time.
+Example: Trigger 2 days after a Task's due date if the Status is still "Not Started".
+Example: Trigger 30 days before the "Annual Process Restart" date on a Contact record.
+2. The Conditions (The "Only If")
+This allows you to add further criteria to your trigger to make the automation more specific. The rule will only run if the trigger event occurs AND these conditions are met.
+Example:
+Trigger: A Lead record is updated.
+Condition: The Status field is now "HHQ signed (completed)" AND the Lead Score is greater than 80.
+This prevents the automation from running on lower-quality leads, even if they complete the HHQ.
+3. The Actions (The "Then That")
+This is what the system does automatically once the trigger event and conditions are met. A good system will allow you to perform a series of actions in a specific order.
+Field Updates: Change the value of one or more fields on the record that triggered the rule, or on a related record.
+Example: When a Lead converts, set the new Contact record's Stage to "Intake".
+Record Creation: Create a new record.
+Example: When a Contact's Stage changes to "Initial Labs", automatically create three Task records: "Send Lab Requisition", "Confirm Patient Received Requisition", and "Schedule Lab Review Appointment".
+Task Assignment: Create and assign tasks to specific users or roles.
+Example: When a Lead is converted to a Contact, create a Task for the new owner (the Health Coach) to "Make Initial Welcome Call".
+Email Automation: Send a specific email template.
+Example: When a Lead status changes to "Booking: Paid/ booked", send the "Welcome to the Program!" email template to the customer.
+Notifications: Send an internal notification (in-app, email, or via a tool like Slack) to a user.
+Example: Notify the Health Coach instantly when a new contact has been assigned to them.
+Putting It All Together: Your Lead Conversion Example
+Let's scope out your key lead conversion process using this framework. You would build a single automation rule named "Process Signed HHQ Lead".
+Name of Rule: Lead Conversion on Booking
+Object: Lead
+Trigger: When a Lead record is created or updated.
+Conditions:
+Status field is changed to "Booking: Paid/ booked"
+Actions (to be executed in order):
+Convert Lead: Execute the lead conversion process.
+Update New Contact Owner: Set the Contact Owner to the user listed in the Health Coach Booked With field from the original lead.
+Update New Contact Stage: Set the Stage on the new Contact record to "Intake".
+Create Task:
+Create a new Task record.
+Assign to: The new Contact Owner.
+Subject: "Schedule Initial Intake Call".
+Related to: The new Contact record.
+Due Date: 2 business days from today.
+Send Notification:
+Send an email notification to the new Contact Owner with the subject "New Contact Assigned: [Contact Name]".
