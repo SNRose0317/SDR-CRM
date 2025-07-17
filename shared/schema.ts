@@ -4,7 +4,7 @@ import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["SDR", "Health Coach", "Admin"]);
+export const userRoleEnum = pgEnum("user_role", ["SDR", "Health Coach", "Admin", "Patient"]);
 export const leadStatusEnum = pgEnum("lead_status", [
   "HHQ Started",
   "HHQ Signed",
@@ -32,6 +32,23 @@ export const contactStageEnum = pgEnum("contact_stage", [
 export const taskStatusEnum = pgEnum("task_status", ["Pending", "In Progress", "Completed"]);
 export const taskPriorityEnum = pgEnum("task_priority", ["Low", "Medium", "High"]);
 export const appointmentStatusEnum = pgEnum("appointment_status", ["Scheduled", "Confirmed", "Completed", "Cancelled", "No Show"]);
+export const patientActivityTypeEnum = pgEnum("patient_activity_type", [
+  "LOGIN",
+  "PROFILE_UPDATE",
+  "APPOINTMENT_BOOKED",
+  "APPOINTMENT_CANCELLED",
+  "MESSAGE_SENT",
+  "RECORD_ACCESSED",
+  "DOCUMENT_UPLOADED"
+]);
+export const patientNotificationTypeEnum = pgEnum("patient_notification_type", [
+  "APPOINTMENT_REMINDER",
+  "LAB_RESULTS_AVAILABLE",
+  "PRESCRIPTION_READY",
+  "MESSAGE_RECEIVED",
+  "STAGE_UPDATED",
+  "GENERAL_ANNOUNCEMENT"
+]);
 
 // Users table
 export const users = pgTable("users", {
@@ -41,6 +58,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name", { length: 100 }),
   role: userRoleEnum("role").notNull(),
   isActive: boolean("is_active").default(true),
+  contactId: integer("contact_id").references(() => contacts.id),
+  portalAccess: boolean("portal_access").default(false),
+  lastPortalLogin: timestamp("last_portal_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -118,6 +138,48 @@ export const activityLogs = pgTable("activity_logs", {
   createdAt: timestamp("created_at").defaultNow()
 });
 
+// Portal-specific tables
+export const patientSessions = pgTable("patient_sessions", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").references(() => contacts.id),
+  sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const patientActivities = pgTable("patient_activities", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").references(() => contacts.id),
+  activityType: patientActivityTypeEnum("activity_type").notNull(),
+  activityDescription: text("activity_description"),
+  metadata: text("metadata"), // JSON string
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const patientMessages = pgTable("patient_messages", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").references(() => contacts.id),
+  healthCoachId: integer("health_coach_id").references(() => users.id),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  sentByPatient: boolean("sent_by_patient").default(true),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
+export const patientNotifications = pgTable("patient_notifications", {
+  id: serial("id").primaryKey(),
+  patientId: integer("patient_id").references(() => contacts.id),
+  type: patientNotificationTypeEnum("type").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  actionUrl: varchar("action_url", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   ownedLeads: many(leads),
@@ -159,6 +221,23 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   user: one(users, { fields: [activityLogs.userId], references: [users.id] })
 }));
 
+export const patientSessionsRelations = relations(patientSessions, ({ one }) => ({
+  patient: one(contacts, { fields: [patientSessions.patientId], references: [contacts.id] })
+}));
+
+export const patientActivitiesRelations = relations(patientActivities, ({ one }) => ({
+  patient: one(contacts, { fields: [patientActivities.patientId], references: [contacts.id] })
+}));
+
+export const patientMessagesRelations = relations(patientMessages, ({ one }) => ({
+  patient: one(contacts, { fields: [patientMessages.patientId], references: [contacts.id] }),
+  healthCoach: one(users, { fields: [patientMessages.healthCoachId], references: [users.id] })
+}));
+
+export const patientNotificationsRelations = relations(patientNotifications, ({ one }) => ({
+  patient: one(contacts, { fields: [patientNotifications.patientId], references: [contacts.id] })
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertLeadSchema = createInsertSchema(leads).omit({ id: true, createdAt: true, updatedAt: true });
@@ -170,6 +249,12 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({ i
   scheduledAt: z.string().transform((str) => new Date(str))
 });
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({ id: true, createdAt: true });
+
+// Portal insert schemas
+export const insertPatientSessionSchema = createInsertSchema(patientSessions).omit({ id: true, createdAt: true });
+export const insertPatientActivitySchema = createInsertSchema(patientActivities).omit({ id: true, createdAt: true });
+export const insertPatientMessageSchema = createInsertSchema(patientMessages).omit({ id: true, createdAt: true });
+export const insertPatientNotificationSchema = createInsertSchema(patientNotifications).omit({ id: true, createdAt: true });
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -184,3 +269,13 @@ export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = z.infer<typeof insertAppointmentSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+// Portal types
+export type PatientSession = typeof patientSessions.$inferSelect;
+export type InsertPatientSession = z.infer<typeof insertPatientSessionSchema>;
+export type PatientActivity = typeof patientActivities.$inferSelect;
+export type InsertPatientActivity = z.infer<typeof insertPatientActivitySchema>;
+export type PatientMessage = typeof patientMessages.$inferSelect;
+export type InsertPatientMessage = z.infer<typeof insertPatientMessageSchema>;
+export type PatientNotification = typeof patientNotifications.$inferSelect;
+export type InsertPatientNotification = z.infer<typeof insertPatientNotificationSchema>;

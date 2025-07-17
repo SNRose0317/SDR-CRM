@@ -9,6 +9,7 @@ import {
   insertAppointmentSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import portalRoutes from "./portalRoutes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard routes
@@ -384,6 +385,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete appointment" });
     }
   });
+
+  // Portal routes
+  app.use("/api/portal", portalRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

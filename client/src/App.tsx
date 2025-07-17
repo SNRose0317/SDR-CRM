@@ -13,7 +13,53 @@ import Users from "@/features/users/pages/users";
 import Settings from "@/features/settings/pages/settings";
 import NotFound from "@/shared/pages/not-found";
 
+// Portal imports
+import PortalLogin from "@/features/portal/components/auth/portal-login";
+import PortalLayout from "@/features/portal/components/layout/portal-layout";
+import PortalDashboard from "@/features/portal/pages/portal-dashboard";
+import PortalAppointments from "@/features/portal/pages/portal-appointments";
+import PortalMessages from "@/features/portal/pages/portal-messages";
+import PortalProfile from "@/features/portal/pages/portal-profile";
+import { usePortalAuth } from "@/features/portal/hooks/usePortalAuth";
+
+function PortalRouter() {
+  const { isAuthenticated, isLoading } = usePortalAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <PortalLogin />;
+  }
+
+  return (
+    <PortalLayout>
+      <Switch>
+        <Route path="/portal/dashboard" component={PortalDashboard} />
+        <Route path="/portal/appointments" component={PortalAppointments} />
+        <Route path="/portal/messages" component={PortalMessages} />
+        <Route path="/portal/profile" component={PortalProfile} />
+        <Route path="/portal/records" component={() => <div>Records coming soon</div>} />
+        <Route path="/portal*" component={() => <PortalDashboard />} />
+      </Switch>
+    </PortalLayout>
+  );
+}
+
 function Router() {
+  return (
+    <Switch>
+      {/* Portal routes */}
+      <Route path="/portal*" component={PortalRouter} />
+      
+      {/* Main app routes */}
+      <Route path="*" component={MainAppRouter} />
+    </Switch>
+  );
+}
+
+function MainAppRouter() {
   return (
     <MainLayout>
       <Switch>

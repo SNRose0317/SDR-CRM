@@ -16,7 +16,7 @@ const formSchema = insertUserSchema.extend({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  role: z.enum(["SDR", "Health Coach", "Admin"], {
+  role: z.enum(["SDR", "Health Coach", "Admin", "Patient"], {
     required_error: "Role is required"
   }),
   isActive: z.boolean().default(true),
@@ -150,6 +150,7 @@ export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
                   <SelectItem value="SDR">SDR</SelectItem>
                   <SelectItem value="Health Coach">Health Coach</SelectItem>
                   <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="Patient">Patient</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
