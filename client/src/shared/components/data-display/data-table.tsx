@@ -19,22 +19,56 @@ import {
 import { Search, ChevronUp, ChevronDown } from "lucide-react";
 import { LoadingSpinner } from "@/shared/components/feedback";
 
+/**
+ * Column configuration for DataTable
+ */
 interface Column {
+  /** Unique key for the column, used for sorting and data access */
   key: string;
+  /** Display label for the column header */
   label: string;
+  /** Whether the column can be sorted */
   sortable?: boolean;
+  /** Custom render function for the column content */
   render?: (value: any, row: any) => React.ReactNode;
 }
 
+/**
+ * Props for the DataTable component
+ */
 interface DataTableProps {
+  /** Column configuration array */
   columns: Column[];
+  /** Data array to display in the table */
   data: any[];
+  /** Loading state indicator */
   loading?: boolean;
+  /** Callback for sorting changes */
   onSort?: (column: string, direction: 'asc' | 'desc') => void;
+  /** Callback for filter changes */
   onFilter?: (filters: any) => void;
+  /** Custom filter components to display */
   filters?: React.ReactNode;
 }
 
+/**
+ * DataTable component for displaying tabular data with sorting and filtering
+ * 
+ * Features:
+ * - Sortable columns with visual indicators
+ * - Search functionality
+ * - Custom filter components
+ * - Loading states with spinner
+ * - Responsive design
+ * - Custom column rendering
+ * 
+ * @param columns - Array of column configurations
+ * @param data - Array of data objects to display
+ * @param loading - Shows loading spinner when true
+ * @param onSort - Callback for column sorting
+ * @param onFilter - Callback for data filtering
+ * @param filters - Custom filter components
+ */
 export default function DataTable({ 
   columns, 
   data, 

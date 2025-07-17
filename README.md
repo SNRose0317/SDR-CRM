@@ -85,8 +85,11 @@ healthcrm/
 1. **Schema**: Define database table in `shared/schema.ts`
 2. **Storage**: Add CRUD operations in `server/storage.ts`
 3. **Routes**: Add API endpoints in `server/routes.ts`
-4. **Components**: Create feature directory in `client/src/features/`
-5. **Pages**: Add page component and routing
+4. **Feature Directory**: Create in `client/src/features/{feature-name}/`
+5. **Components**: Add to `client/src/features/{feature-name}/components/`
+6. **Pages**: Add to `client/src/features/{feature-name}/pages/`
+7. **Documentation**: Add README.md to feature directory
+8. **Routing**: Update `client/src/App.tsx` with new routes
 
 ### File Organization Rules
 - **Pages**: Main route components go in `features/{feature}/pages/`
@@ -94,6 +97,8 @@ healthcrm/
 - **Shared UI**: Reusable components go in `shared/components/`
 - **Business Logic**: Custom hooks go in `shared/hooks/`
 - **Utilities**: Helper functions go in `shared/lib/`
+- **Documentation**: README.md files in each feature and major directory
+- **Component Exports**: Index.ts files for clean imports
 
 ## 🎯 Healthcare-Specific Workflows
 

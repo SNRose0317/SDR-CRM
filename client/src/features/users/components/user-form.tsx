@@ -22,12 +22,30 @@ const formSchema = insertUserSchema.extend({
   isActive: z.boolean().default(true),
 });
 
+/**
+ * Props for the UserForm component
+ */
 interface UserFormProps {
+  /** Existing user data for editing, null for creating new user */
   user?: User | null;
+  /** Callback fired when user is successfully created/updated */
   onSuccess: () => void;
+  /** Callback fired when user cancels the form */
   onCancel: () => void;
 }
 
+/**
+ * UserForm component for creating and editing system users
+ * 
+ * Supports three user roles:
+ * - SDR: Sales Development Representative (manages leads)
+ * - Health Coach: Manages patient care and healthcare workflows
+ * - Admin: Full system access and user management
+ * 
+ * @param user - Existing user data for editing, null for creating new user
+ * @param onSuccess - Callback fired when user is successfully created/updated
+ * @param onCancel - Callback fired when user cancels the form
+ */
 export default function UserForm({ user, onSuccess, onCancel }: UserFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
