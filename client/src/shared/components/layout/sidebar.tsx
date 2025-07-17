@@ -10,7 +10,8 @@ import {
   Settings,
   User,
   X,
-  Heart
+  Heart,
+  Zap
 } from "lucide-react";
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Appointments", href: "/appointments", icon: Calendar },
   { name: "Users", href: "/users", icon: User },
+  { name: "Workflows", href: "/workflows", icon: Zap },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
