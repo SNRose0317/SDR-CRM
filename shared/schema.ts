@@ -355,10 +355,8 @@ export const permissionRules = pgTable("permission_rules", {
   // Rule subject (what entity type this rule applies to)
   subjectType: varchar("subject_type").notNull(), // 'lead', 'contact', 'task', etc.
   
-  // Rule condition
-  fieldName: varchar("field_name").notNull(), // 'createdAt', 'updatedAt', 'status', etc.
-  operator: varchar("operator").notNull(), // '>', '<', '=', '!=', 'contains', etc.
-  value: jsonb("value").notNull(), // The comparison value
+  // Rule condition (now supports compound conditions)
+  conditions: jsonb("conditions").notNull(), // Stores the full condition tree with AND/OR logic
   
   // Rule action
   actionType: varchar("action_type").notNull(), // 'grant_access', 'assign_entity', etc.

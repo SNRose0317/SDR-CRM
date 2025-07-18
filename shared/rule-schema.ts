@@ -123,6 +123,20 @@ export type InsertPermissionRule = typeof permissionRules.$inferInsert;
 export type RuleEvaluation = typeof ruleEvaluations.$inferSelect;
 export type RuleAuditLog = typeof ruleAuditLog.$inferSelect;
 
+// Enhanced condition types for compound rules
+export interface SimpleCondition {
+  field: string;
+  operator: '>' | '<' | '=' | '!=' | 'contains' | 'starts_with' | 'ends_with' | 'in' | 'between' | 'is_empty' | 'is_not_empty';
+  value: any;
+}
+
+export interface CompoundCondition {
+  logic: 'AND' | 'OR';
+  conditions: (SimpleCondition | CompoundCondition)[];
+}
+
+export type RuleCondition = SimpleCondition | CompoundCondition;
+
 // Rule configuration types
 export interface RuleConfig {
   name: string;
@@ -130,11 +144,7 @@ export interface RuleConfig {
   subject: {
     type: 'lead' | 'contact' | 'task' | 'appointment';
   };
-  condition: {
-    field: string;
-    operator: '>' | '<' | '=' | '!=' | 'contains' | 'in' | 'between';
-    value: any;
-  };
+  condition: RuleCondition;
   action: {
     type: 'grant_access' | 'assign_entity' | 'trigger_workflow' | 'send_notification';
     target: {
@@ -190,6 +200,8 @@ export const FIELD_OPERATORS = {
     { value: '=', label: 'Equal to' },
     { value: '!=', label: 'Not equal to' },
     { value: 'between', label: 'Between' },
+    { value: 'is_empty', label: 'Is empty' },
+    { value: 'is_not_empty', label: 'Is not empty' },
   ],
   number: [
     { value: '>', label: 'Greater than' },
@@ -197,22 +209,32 @@ export const FIELD_OPERATORS = {
     { value: '=', label: 'Equal to' },
     { value: '!=', label: 'Not equal to' },
     { value: 'between', label: 'Between' },
+    { value: 'is_empty', label: 'Is empty' },
+    { value: 'is_not_empty', label: 'Is not empty' },
   ],
   string: [
     { value: '=', label: 'Equal to' },
     { value: '!=', label: 'Not equal to' },
     { value: 'contains', label: 'Contains' },
+    { value: 'starts_with', label: 'Starts with' },
+    { value: 'ends_with', label: 'Ends with' },
     { value: 'in', label: 'In list' },
+    { value: 'is_empty', label: 'Is empty' },
+    { value: 'is_not_empty', label: 'Is not empty' },
   ],
   enum: [
     { value: '=', label: 'Equal to' },
     { value: '!=', label: 'Not equal to' },
     { value: 'in', label: 'In list' },
+    { value: 'is_empty', label: 'Is empty' },
+    { value: 'is_not_empty', label: 'Is not empty' },
   ],
   reference: [
     { value: '=', label: 'Equal to' },
     { value: '!=', label: 'Not equal to' },
     { value: 'in', label: 'In list' },
+    { value: 'is_empty', label: 'Is empty' },
+    { value: 'is_not_empty', label: 'Is not empty' },
   ],
 };
 

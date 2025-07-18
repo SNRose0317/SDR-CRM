@@ -10,7 +10,8 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
 import { Plus, Settings, Users, Calendar, Clock, Shield, Eye, Edit, Trash2 } from "lucide-react";
 import { ENTITY_FIELDS, FIELD_OPERATORS, ACTION_TYPES, TARGET_TYPES } from "@shared/rule-schema";
-import type { RuleConfig } from "@shared/rule-schema";
+import type { RuleConfig, SimpleCondition } from "@shared/rule-schema";
+import { ConditionBuilder } from "./condition-builder";
 
 interface RuleBuilderProps {
   onSave: (rule: RuleConfig) => void;
@@ -27,7 +28,7 @@ export function RuleBuilder({ onSave, onCancel, existingRule }: RuleBuilderProps
       field: "",
       operator: ">",
       value: "",
-    },
+    } as SimpleCondition,
     action: {
       type: "grant_access",
       target: { type: "role", id: "" },
@@ -44,12 +45,9 @@ export function RuleBuilder({ onSave, onCancel, existingRule }: RuleBuilderProps
       newErrors.name = "Rule name is required";
     }
     
-    if (!rule.condition.field) {
-      newErrors.field = "Field is required";
-    }
-    
-    if (!rule.condition.value) {
-      newErrors.value = "Value is required";
+    // Basic validation - detailed condition validation is handled by ConditionBuilder
+    if ('field' in rule.condition && !rule.condition.field) {
+      newErrors.condition = "At least one condition is required";
     }
     
     if (!rule.action.target.id) {
@@ -65,10 +63,6 @@ export function RuleBuilder({ onSave, onCancel, existingRule }: RuleBuilderProps
       onSave(rule);
     }
   };
-
-  const availableFields = ENTITY_FIELDS[rule.subject.type] || [];
-  const selectedField = availableFields.find(f => f.name === rule.condition.field);
-  const availableOperators = selectedField ? FIELD_OPERATORS[selectedField.type] || [] : [];
 
   return (
     <div className="space-y-6">
@@ -160,106 +154,30 @@ export function RuleBuilder({ onSave, onCancel, existingRule }: RuleBuilderProps
       </Card>
 
       {/* Condition Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            WHAT - Condition
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            When should this rule apply?
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Field Selection */}
-            <div className="space-y-2">
-              <Label>Field</Label>
-              <Select
-                value={rule.condition.field}
-                onValueChange={(value) => setRule({
-                  ...rule,
-                  condition: { ...rule.condition, field: value, operator: ">", value: "" }
-                })}
-              >
-                <SelectTrigger className={errors.field ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select field" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableFields.map((field) => (
-                    <SelectItem key={field.name} value={field.name}>
-                      {field.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.field && <p className="text-sm text-red-500">{errors.field}</p>}
-            </div>
-
-            {/* Operator Selection */}
-            <div className="space-y-2">
-              <Label>Operator</Label>
-              <Select
-                value={rule.condition.operator}
-                onValueChange={(value) => setRule({
-                  ...rule,
-                  condition: { ...rule.condition, operator: value as any }
-                })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select operator" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableOperators.map((operator) => (
-                    <SelectItem key={operator.value} value={operator.value}>
-                      {operator.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Value Input */}
-            <div className="space-y-2">
-              <Label>Value</Label>
-              {selectedField?.type === 'datetime' ? (
-                <Select
-                  value={rule.condition.value}
-                  onValueChange={(value) => setRule({
-                    ...rule,
-                    condition: { ...rule.condition, value }
-                  })}
-                >
-                  <SelectTrigger className={errors.value ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1 hour ago">1 hour ago</SelectItem>
-                    <SelectItem value="2 hours ago">2 hours ago</SelectItem>
-                    <SelectItem value="4 hours ago">4 hours ago</SelectItem>
-                    <SelectItem value="8 hours ago">8 hours ago</SelectItem>
-                    <SelectItem value="12 hours ago">12 hours ago</SelectItem>
-                    <SelectItem value="24 hours ago">24 hours ago</SelectItem>
-                    <SelectItem value="48 hours ago">48 hours ago</SelectItem>
-                    <SelectItem value="1 week ago">1 week ago</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  value={rule.condition.value}
-                  onChange={(e) => setRule({
-                    ...rule,
-                    condition: { ...rule.condition, value: e.target.value }
-                  })}
-                  placeholder="Enter value"
-                  className={errors.value ? "border-red-500" : ""}
-                />
-              )}
-              {errors.value && <p className="text-sm text-red-500">{errors.value}</p>}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        <Label className="text-base font-semibold flex items-center gap-2">
+          <Settings className="w-5 h-5" />
+          WHAT - Condition
+        </Label>
+        <p className="text-sm text-muted-foreground">
+          When should this rule apply?
+        </p>
+        <ConditionBuilder
+          entityType={rule.subject.type}
+          condition={rule.condition}
+          onChange={(condition) => setRule({ ...rule, condition })}
+          onError={(error) => {
+            const newErrors = { ...errors };
+            if (error) {
+              newErrors.condition = error;
+            } else {
+              delete newErrors.condition;
+            }
+            setErrors(newErrors);
+          }}
+        />
+        {errors.condition && <p className="text-sm text-red-500">{errors.condition}</p>}
+      </div>
 
       {/* Action Configuration */}
       <Card>
@@ -457,11 +375,9 @@ export function RuleBuilder({ onSave, onCancel, existingRule }: RuleBuilderProps
           <div className="p-4 bg-muted rounded-lg">
             <p className="text-sm">
               <strong>When</strong> a <Badge variant="outline">{rule.subject.type}</Badge> 
-              {rule.condition.field && (
+              {rule.condition && (
                 <>
-                  {' '}has <Badge variant="outline">{rule.condition.field}</Badge>
-                  {' '}<Badge variant="outline">{rule.condition.operator}</Badge>
-                  {' '}<Badge variant="outline">{rule.condition.value}</Badge>
+                  {' '}meets condition
                 </>
               )}
               <br />

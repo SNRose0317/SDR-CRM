@@ -60,11 +60,9 @@ export class RuleEngine {
         return { matches: false, permissions: {} };
       }
 
-      // Evaluate the condition
-      const matches = await this.evaluateCondition(
-        rule.fieldName,
-        rule.operator,
-        rule.value,
+      // Evaluate the compound condition
+      const matches = await this.evaluateCompoundCondition(
+        rule.conditions as any,
         entity
       );
 
@@ -143,13 +141,41 @@ export class RuleEngine {
     return permissions;
   }
 
-  // Evaluate a condition against entity data
-  private async evaluateCondition(
+  // Evaluate compound condition (supports AND/OR logic)
+  private async evaluateCompoundCondition(
+    condition: any,
+    entity: any
+  ): Promise<boolean> {
+    // If it's a simple condition
+    if (condition.field && condition.operator) {
+      return this.evaluateSimpleCondition(condition.field, condition.operator, condition.value, entity);
+    }
+    
+    // If it's a compound condition with logic
+    if (condition.logic && condition.conditions) {
+      const results = await Promise.all(
+        condition.conditions.map((subCondition: any) => 
+          this.evaluateCompoundCondition(subCondition, entity)
+        )
+      );
+      
+      if (condition.logic === 'AND') {
+        return results.every(result => result);
+      } else if (condition.logic === 'OR') {
+        return results.some(result => result);
+      }
+    }
+    
+    return false;
+  }
+
+  // Evaluate a simple condition against entity data
+  private evaluateSimpleCondition(
     fieldName: string,
     operator: string,
     ruleValue: any,
     entity: any
-  ): Promise<boolean> {
+  ): boolean {
     const entityValue = entity[fieldName];
     
     switch (operator) {
@@ -179,6 +205,12 @@ export class RuleEngine {
       case 'contains':
         return String(entityValue).toLowerCase().includes(String(ruleValue).toLowerCase());
         
+      case 'starts_with':
+        return String(entityValue).toLowerCase().startsWith(String(ruleValue).toLowerCase());
+        
+      case 'ends_with':
+        return String(entityValue).toLowerCase().endsWith(String(ruleValue).toLowerCase());
+        
       case 'in':
         return Array.isArray(ruleValue) && ruleValue.includes(entityValue);
         
@@ -187,6 +219,12 @@ export class RuleEngine {
           return entityValue >= ruleValue[0] && entityValue <= ruleValue[1];
         }
         return false;
+        
+      case 'is_empty':
+        return entityValue === null || entityValue === undefined || entityValue === '';
+        
+      case 'is_not_empty':
+        return entityValue !== null && entityValue !== undefined && entityValue !== '';
         
       default:
         return false;
@@ -316,9 +354,7 @@ export class RuleEngine {
         name: config.name,
         description: config.description,
         subjectType: config.subject.type,
-        fieldName: config.condition.field,
-        operator: config.condition.operator,
-        value: config.condition.value,
+        conditions: config.condition,
         actionType: config.action.type,
         targetType: config.action.target.type,
         targetId: config.action.target.id,
@@ -341,9 +377,7 @@ export class RuleEngine {
     if (config.description) updateData.description = config.description;
     if (config.subject) updateData.subjectType = config.subject.type;
     if (config.condition) {
-      updateData.fieldName = config.condition.field;
-      updateData.operator = config.condition.operator;
-      updateData.value = config.condition.value;
+      updateData.conditions = config.condition;
     }
     if (config.action) {
       updateData.actionType = config.action.type;
