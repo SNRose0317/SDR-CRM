@@ -7,8 +7,8 @@ import { Label } from "@/shared/components/ui/label";
 import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
 import { Plus, X, Filter, Layers } from "lucide-react";
-import { ENTITY_FIELDS, FIELD_OPERATORS } from "@shared/rule-schema";
-import type { SimpleCondition, CompoundCondition, RuleCondition } from "@shared/rule-schema";
+import { ENTITY_FIELDS, FIELD_OPERATORS } from "@shared/rules/schema";
+import type { SimpleCondition, CompoundCondition, RuleCondition } from "@shared/rules/schema";
 
 interface ConditionBuilderProps {
   entityType: string;

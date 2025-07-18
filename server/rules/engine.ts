@@ -1,8 +1,8 @@
 // Rule evaluation engine for dynamic permission system
-import { db } from "./db";
+import { db } from "../db";
 import { permissionRules, ruleEvaluations, ruleAuditLog, users, leads, contacts, tasks, appointments } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
-import type { PermissionRule, RuleConfig } from "@shared/rule-schema";
+import type { PermissionRule, RuleConfig } from "@shared/rules/schema";
 
 export class RuleEngine {
   private static instance: RuleEngine;

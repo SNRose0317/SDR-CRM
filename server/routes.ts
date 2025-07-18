@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import portalRoutes from "./portalRoutes";
-import ruleRoutes from "./rule-routes";
+import ruleRoutes from "./rules/routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard routes

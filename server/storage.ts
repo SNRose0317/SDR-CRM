@@ -21,7 +21,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, isNull } from "drizzle-orm";
 import { canUserSeeEntity, canUserClaimEntity, DEFAULT_PERMISSIONS, type UserRole, type EntityType } from "@shared/permissions";
-import { ruleEngine } from "./rule-engine";
+import { ruleEngine } from "./rules/engine";
 
 export interface IStorage {
   // User operations

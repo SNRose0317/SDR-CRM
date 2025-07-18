@@ -12,7 +12,7 @@ import Appointments from "@/features/appointments/pages/appointments";
 import Users from "@/features/users/pages/users";
 import Settings from "@/features/settings/pages/settings";
 import Workflows from "@/pages/workflows";
-import Rules from "@/features/workflows/pages/rules";
+import Rules from "@/features/rules/pages/rules";
 
 import NotFound from "@/shared/pages/not-found";
 

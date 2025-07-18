@@ -11,7 +11,7 @@ import { Plus, Settings, Users, Eye, Edit, Trash2, MoreHorizontal, Shield, TestT
 import { RuleBuilder } from "./rule-builder";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { PermissionRule, RuleConfig } from "@shared/rule-schema";
+import type { PermissionRule, RuleConfig } from "@shared/rules/schema";
 
 export default function RuleManagement() {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);

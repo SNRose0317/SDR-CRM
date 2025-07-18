@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { ruleEngine } from "./rule-engine";
+import { ruleEngine } from "./engine";
 import { z } from "zod";
-import type { RuleConfig } from "@shared/rule-schema";
+import type { RuleConfig } from "@shared/rules/schema";
 
 const router = Router();
 

@@ -9,8 +9,8 @@ import { Switch } from "@/shared/components/ui/switch";
 import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
 import { Plus, Settings, Users, Calendar, Clock, Shield, Eye, Edit, Trash2 } from "lucide-react";
-import { ENTITY_FIELDS, FIELD_OPERATORS, ACTION_TYPES, TARGET_TYPES } from "@shared/rule-schema";
-import type { RuleConfig, SimpleCondition } from "@shared/rule-schema";
+import { ENTITY_FIELDS, FIELD_OPERATORS, ACTION_TYPES, TARGET_TYPES } from "@shared/rules/schema";
+import type { RuleConfig, SimpleCondition } from "@shared/rules/schema";
 import { ConditionBuilder } from "./condition-builder";
 
 interface RuleBuilderProps {
