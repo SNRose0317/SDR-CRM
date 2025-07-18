@@ -45,6 +45,8 @@ export const usePatientAppointments = () => {
     queryKey: ['portal', 'patient', 'appointments'],
     queryFn: () => portalRequest('/patient/appointments'),
     enabled: hasToken,
+    staleTime: 0, // Always refetch to avoid caching issues
+    cacheTime: 0, // Don't cache the result
   });
 };
 

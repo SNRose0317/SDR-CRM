@@ -292,6 +292,11 @@ router.get('/patient/appointments', portalAuth, async (req: any, res) => {
     const userId = user.entityId;
     const userType = user.userType;
     
+    // Add cache-busting headers to prevent browser caching issues
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     let appointmentList = [];
     
     if (userType === 'lead') {
