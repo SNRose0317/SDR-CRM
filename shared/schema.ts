@@ -17,7 +17,7 @@ import { relations } from "drizzle-orm";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["sdr", "health_coach", "admin", "patient"]);
-export const leadStatusEnum = pgEnum("lead_status", ["New", "HHQ Started", "HHQ Signed", "Booking: Not Paid", "Booking: Paid/Not Booked", "Booking: Paid/Booked"]);
+export const leadStatusEnum = pgEnum("lead_status", ["New", "HHQ Started", "HHQ Signed", "Booking: Not Paid", "Booking: Paid/Not Booked", "Booking: Paid/Booked", "Converted"]);
 export const hhqStatusEnum = pgEnum("hhq_status", ["Created", "Submitted", "Signed", "Paid", "Appointment Booked", "Completed"]);
 export const contactStageEnum = pgEnum("contact_stage", [
   "Intake",

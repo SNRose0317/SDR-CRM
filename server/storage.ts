@@ -895,6 +895,15 @@ export class DatabaseStorage implements IStorage {
       userId: healthCoachId
     });
 
+    // Mark lead as converted (soft delete approach)
+    await db
+      .update(leads)
+      .set({
+        status: 'Converted',
+        updatedAt: new Date()
+      })
+      .where(eq(leads.id, leadId));
+
     return contact;
   }
 }
