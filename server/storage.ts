@@ -81,7 +81,7 @@ export interface IStorage {
   // Health History Questionnaire operations
   getHealthQuestionnaire(leadId: number): Promise<HealthQuestionnaire | undefined>;
   createHealthQuestionnaire(data: InsertHealthQuestionnaire): Promise<HealthQuestionnaire>;
-  signHealthQuestionnaire(questionnaireId: number): Promise<HealthQuestionnaire>;
+  signHealthQuestionnaire(questionnaireId: number, signatureData?: string): Promise<HealthQuestionnaire>;
   markAsPaid(questionnaireId: number, amount: number): Promise<HealthQuestionnaire>;
   bookAppointment(questionnaireId: number, appointmentId: number): Promise<HealthQuestionnaire>;
 }
@@ -661,12 +661,13 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async signHealthQuestionnaire(questionnaireId: number): Promise<HealthQuestionnaire> {
+  async signHealthQuestionnaire(questionnaireId: number, signatureData?: string): Promise<HealthQuestionnaire> {
     const result = await db
       .update(healthQuestionnaires)
       .set({
         isSigned: true,
         signedAt: new Date(),
+        signatureData: signatureData || null,
         updatedAt: new Date()
       })
       .where(eq(healthQuestionnaires.id, questionnaireId))

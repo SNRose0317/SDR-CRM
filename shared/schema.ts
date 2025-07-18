@@ -210,6 +210,7 @@ export const healthQuestionnaires = pgTable("health_questionnaires", {
   overallHealth: integer("overall_health").notNull(), // 1-10 scale
   isSigned: boolean("is_signed").default(false).notNull(),
   signedAt: timestamp("signed_at"),
+  signatureData: text("signature_data"), // Store signature/name data
   isPaid: boolean("is_paid").default(false).notNull(),
   paidAt: timestamp("paid_at"),
   paymentAmount: decimal("payment_amount", { precision: 10, scale: 2 }),

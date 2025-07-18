@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Label } from "@/shared/components/ui/label";
+import { Input } from "@/shared/components/ui/input";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -15,11 +16,14 @@ interface SignatureStepProps {
 
 export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
   const [agreed, setAgreed] = useState(false);
+  const [fullName, setFullName] = useState("");
   const { toast } = useToast();
 
   const signMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/hhq/${hhqId}/sign`);
+      const response = await apiRequest("POST", `/api/hhq/${hhqId}/sign`, {
+        signatureData: fullName
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -39,6 +43,14 @@ export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
   });
 
   const handleSign = () => {
+    if (!fullName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter your full name to sign.",
+        variant: "destructive",
+      });
+      return;
+    }
     signMutation.mutate();
   };
 
@@ -67,16 +79,26 @@ export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
           </ul>
         </div>
 
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <p className="text-gray-500 mb-4">Click to sign electronically</p>
-          <div className="flex items-center justify-center space-x-2">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="fullName">Full Name (Electronic Signature)</Label>
+            <Input
+              id="fullName"
+              placeholder="Enter your full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-2">
             <Checkbox
               id="agree"
               checked={agreed}
               onCheckedChange={(checked) => setAgreed(checked as boolean)}
             />
             <Label htmlFor="agree" className="text-sm cursor-pointer">
-              I agree to sign this document electronically
+              I agree to the terms and conditions above and confirm that typing my name constitutes my electronic signature
             </Label>
           </div>
         </div>
@@ -84,7 +106,7 @@ export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
         <Button
           className="w-full"
           onClick={handleSign}
-          disabled={!agreed || signMutation.isPending}
+          disabled={!agreed || !fullName.trim() || signMutation.isPending}
         >
           {signMutation.isPending ? "Signing..." : "Sign Document"}
         </Button>

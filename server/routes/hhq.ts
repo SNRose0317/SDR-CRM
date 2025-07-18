@@ -37,7 +37,8 @@ router.post("/", async (req, res) => {
 router.post("/:id/sign", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const hhq = await storage.signHealthQuestionnaire(id);
+    const { signatureData } = req.body;
+    const hhq = await storage.signHealthQuestionnaire(id, signatureData);
     res.json(hhq);
   } catch (error: any) {
     console.error("Error signing HHQ:", error);
