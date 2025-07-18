@@ -7,7 +7,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form";
 import { Slider } from "@/shared/components/ui/slider";
 import { CheckCircle, Circle } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { SignatureStep } from "./signature-step";
@@ -34,6 +34,7 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
   const [currentStep, setCurrentStep] = useState(1);
   const [hhqData, setHhqData] = useState<HealthQuestionnaire | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const actualLeadId = leadId || lead?.id;
 
@@ -298,6 +299,8 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
           hhqId={hhqData.id} 
           isSigned={hhqData.isSigned}
           onComplete={() => {
+            // Invalidate and refetch the HHQ data to get updated signature status
+            queryClient.invalidateQueries({ queryKey: [`/api/hhq/lead/${actualLeadId}`] });
             setCurrentStep(3);
             setHhqData({ ...hhqData, isSigned: true });
           }} 
