@@ -105,8 +105,8 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(leads.status, filters.status));
     }
-    if (filters?.ownerId) {
-      conditions.push(eq(leads.ownerId, filters.ownerId));
+    if (filters?.healthCoachBookedWith) {
+      conditions.push(eq(leads.healthCoachBookedWith, filters.healthCoachBookedWith));
     }
     if (filters?.search) {
       conditions.push(
@@ -139,7 +139,7 @@ export class DatabaseStorage implements IStorage {
       entityId: result[0].id,
       action: 'created',
       details: `Lead ${result[0].firstName} ${result[0].lastName} created`,
-      userId: leadData.ownerId
+      userId: leadData.healthCoachBookedWith
     });
     
     return result[0];
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
       entityId: id,
       action: 'updated',
       details: `Lead updated`,
-      userId: leadData.ownerId || null
+      userId: leadData.healthCoachBookedWith || null
     });
     
     return result[0];
@@ -284,8 +284,8 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(tasks.status, filters.status));
     }
-    if (filters?.assignedToId) {
-      conditions.push(eq(tasks.assignedToId, filters.assignedToId));
+    if (filters?.assignedTo) {
+      conditions.push(eq(tasks.assignedTo, filters.assignedTo));
     }
     if (filters?.priority) {
       conditions.push(eq(tasks.priority, filters.priority));
@@ -320,7 +320,7 @@ export class DatabaseStorage implements IStorage {
       entityId: result[0].id,
       action: 'created',
       details: `Task "${result[0].title}" created`,
-      userId: taskData.assignedToId
+      userId: taskData.assignedTo
     });
     
     return result[0];
@@ -330,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     const updateData = { ...taskData, updatedAt: new Date() };
     
     // If task is being completed, set completedAt
-    if (taskData.status === 'Completed') {
+    if (taskData.status === 'completed') {
       (updateData as any).completedAt = new Date();
     }
     
@@ -346,7 +346,7 @@ export class DatabaseStorage implements IStorage {
       entityId: id,
       action: 'updated',
       details: `Task updated`,
-      userId: taskData.assignedToId || null
+      userId: taskData.assignedTo || null
     });
     
     return result[0];
@@ -385,21 +385,18 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(appointments.status, filters.status));
     }
-    if (filters?.userId) {
-      conditions.push(eq(appointments.userId, filters.userId));
-    }
-    if (filters?.leadId) {
-      conditions.push(eq(appointments.leadId, filters.leadId));
+    if (filters?.attendeeId) {
+      conditions.push(eq(appointments.attendeeId, filters.attendeeId));
     }
     if (filters?.contactId) {
       conditions.push(eq(appointments.contactId, filters.contactId));
     }
     
     if (conditions.length > 0) {
-      return await db.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.scheduledAt));
+      return await db.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.startTime));
     }
     
-    return await db.select().from(appointments).orderBy(desc(appointments.scheduledAt));
+    return await db.select().from(appointments).orderBy(desc(appointments.startTime));
   }
 
   async getAppointment(id: number): Promise<Appointment | undefined> {
@@ -416,7 +413,7 @@ export class DatabaseStorage implements IStorage {
       entityId: result[0].id,
       action: 'created',
       details: `Appointment "${result[0].title}" scheduled`,
-      userId: appointmentData.userId
+      userId: appointmentData.attendeeId
     });
     
     return result[0];
@@ -435,7 +432,7 @@ export class DatabaseStorage implements IStorage {
       entityId: id,
       action: 'updated',
       details: `Appointment updated`,
-      userId: appointmentData.userId || null
+      userId: appointmentData.attendeeId || null
     });
     
     return result[0];

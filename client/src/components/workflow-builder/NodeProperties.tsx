@@ -453,47 +453,73 @@ interface UserConfigurationProps {
 }
 
 const UserConfiguration: React.FC<UserConfigurationProps> = ({ data, onUpdate }) => {
+  const [selectedUserCategory, setSelectedUserCategory] = useState<string>(
+    data.config?.userCategory || 'internal'
+  );
   const [selectedUserType, setSelectedUserType] = useState<string>(
-    data.config?.userType || 'portal_user'
+    data.config?.userType || 'sdr'
   );
   const [selectedUsers, setSelectedUsers] = useState<string[]>(
     data.config?.specificUsers || []
   );
 
-  // User type options mapping to system entities
-  const userTypeOptions = [
-    { value: 'portal_user', label: 'Portal User', description: 'Patients who sign up through patient portal' },
-    { value: 'lead', label: 'Lead', description: 'Potential customers in sales pipeline' },
-    { value: 'contact', label: 'Contact', description: 'Active customers receiving healthcare services' },
+  // User category options - internal vs external
+  const userCategoryOptions = [
+    { value: 'internal', label: 'Internal Users', description: 'System users (staff members)' },
+    { value: 'external', label: 'External Users', description: 'Leads and contacts (customers)' },
+  ];
+
+  // User type options based on category
+  const internalUserTypes = [
     { value: 'sdr', label: 'SDR', description: 'Sales Development Representatives' },
     { value: 'health_coach', label: 'Health Coach', description: 'Healthcare professionals managing patients' },
     { value: 'admin', label: 'Admin', description: 'System administrators with full access' },
   ];
 
-  // Fetch users based on selected type
+  const externalUserTypes = [
+    { value: 'lead', label: 'Lead', description: 'Potential customers in sales pipeline' },
+    { value: 'contact', label: 'Contact', description: 'Active customers receiving healthcare services' },
+  ];
+
+  const getCurrentUserTypes = () => {
+    return selectedUserCategory === 'internal' ? internalUserTypes : externalUserTypes;
+  };
+
+  // Fetch users based on selected category and type
   const { data: availableUsers, isLoading } = useQuery({
-    queryKey: [`/api/users`, selectedUserType],
+    queryKey: [`/api/users`, selectedUserCategory, selectedUserType],
     queryFn: async () => {
-      if (selectedUserType === 'portal_user') {
-        // Portal users are patients
-        const response = await fetch('/api/users?role=patient');
-        return response.json();
-      } else if (selectedUserType === 'lead') {
-        // Leads from leads table
-        const response = await fetch('/api/leads');
-        return response.json();
-      } else if (selectedUserType === 'contact') {
-        // Contacts from contacts table
-        const response = await fetch('/api/contacts');
-        return response.json();
+      if (selectedUserCategory === 'external') {
+        if (selectedUserType === 'lead') {
+          // Leads from leads table
+          const response = await fetch('/api/leads');
+          return response.json();
+        } else if (selectedUserType === 'contact') {
+          // Contacts from contacts table
+          const response = await fetch('/api/contacts');
+          return response.json();
+        }
       } else {
-        // System users (SDR, Health Coach, Admin)
+        // Internal users (SDR, Health Coach, Admin) from users table
         const response = await fetch(`/api/users?role=${selectedUserType}`);
         return response.json();
       }
     },
-    enabled: !!selectedUserType,
+    enabled: !!selectedUserCategory && !!selectedUserType,
   });
+
+  const handleUserCategoryChange = (value: string) => {
+    setSelectedUserCategory(value);
+    setSelectedUsers([]); // Reset user selection when category changes
+    
+    // Set default type based on category
+    const defaultType = value === 'internal' ? 'sdr' : 'lead';
+    setSelectedUserType(defaultType);
+    
+    onUpdate('data.config.userCategory', value);
+    onUpdate('data.config.userType', defaultType);
+    onUpdate('data.config.specificUsers', []);
+  };
 
   const handleUserTypeChange = (value: string) => {
     setSelectedUserType(value);
@@ -512,18 +538,41 @@ const UserConfiguration: React.FC<UserConfigurationProps> = ({ data, onUpdate })
   };
 
   const getUserDisplayName = (user: any) => {
-    if (selectedUserType === 'lead' || selectedUserType === 'contact') {
+    if (selectedUserCategory === 'external') {
+      // External users: leads and contacts
       return `${user.firstName} ${user.lastName} (${user.email})`;
+    } else {
+      // Internal users: system users with roles
+      return `${user.firstName} ${user.lastName} (${user.role})`;
     }
-    return `${user.firstName} ${user.lastName} (${user.role})`;
   };
 
   return (
     <div className="space-y-4">
       <h4 className="font-medium text-gray-900 dark:text-white">User Configuration</h4>
       
-      {/* User Type Selection */}
+      {/* User Category Selection */}
       <div className="space-y-3">
+        <div>
+          <Label>User Category</Label>
+          <Select value={selectedUserCategory} onValueChange={handleUserCategoryChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select user category" />
+            </SelectTrigger>
+            <SelectContent>
+              {userCategoryOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{option.label}</span>
+                    <span className="text-sm text-gray-500">{option.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* User Type Selection */}
         <div>
           <Label>User Type</Label>
           <Select value={selectedUserType} onValueChange={handleUserTypeChange}>
@@ -531,7 +580,7 @@ const UserConfiguration: React.FC<UserConfigurationProps> = ({ data, onUpdate })
               <SelectValue placeholder="Select user type" />
             </SelectTrigger>
             <SelectContent>
-              {userTypeOptions.map(option => (
+              {getCurrentUserTypes().map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   <div className="flex flex-col">
                     <span className="font-medium">{option.label}</span>

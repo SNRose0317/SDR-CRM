@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lead = await storage.updateLead(id, leadData);
       
       // Check if lead should be converted to contact
-      if (leadData.status === "Booking: Paid/Booked") {
+      if (leadData.status === "Booking: Paid/ booked") {
         const existingLead = await storage.getLead(id);
         if (existingLead) {
           const contactData = {
@@ -148,7 +148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: existingLead.email,
             phone: existingLead.phone,
             stage: "Intake" as const,
-            healthCoachId: existingLead.ownerId,
+            healthCoachId: existingLead.healthCoachBookedWith,
             leadId: existingLead.id,
             notes: existingLead.notes
           };
