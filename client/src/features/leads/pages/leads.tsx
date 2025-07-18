@@ -48,14 +48,14 @@ export default function Leads() {
   });
 
   // Mock current user for demo - in real app this would come from auth
-  const currentUser = users?.[0]; // This would be the logged-in user
+  const currentUser = users?.find(u => u.role === 'Admin') || users?.[0]; // Select admin user for testing
 
   // Get My Leads (assigned to current user)
   const { data: myLeads, isLoading: isMyLeadsLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads/my-leads", currentUser?.id],
     enabled: !!currentUser?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/leads/my-leads/${currentUser!.id}?userRole=${currentUser!.role}`);
+      const response = await fetch(`/api/leads/my-leads/${currentUser!.id}?userRole=${currentUser!.role.toLowerCase()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch my leads');
       }
@@ -69,7 +69,7 @@ export default function Leads() {
     queryKey: ["/api/leads/open-leads", currentUser?.id],
     enabled: !!currentUser?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/leads/open-leads/${currentUser!.id}?userRole=${currentUser!.role}`);
+      const response = await fetch(`/api/leads/open-leads/${currentUser!.id}?userRole=${currentUser!.role.toLowerCase()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch open leads');
       }
