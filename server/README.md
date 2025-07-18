@@ -1,69 +1,162 @@
-# Server Directory Structure
+# Server Directory Overview
 
-This directory contains the backend Express.js application.
+This directory contains the complete backend Express.js application for the healthcare CRM system.
 
-## Current Structure:
+## Current Structure
 
 ```
 server/
-├── controllers/        # Route handlers and business logic
-├── middleware/         # Express middleware (auth, validation)
-├── services/          # Business logic services
-├── models/            # Database models and queries
-├── routes/            # Organized route definitions
-│   ├── dashboard.ts   # Dashboard and analytics routes
-│   ├── users.ts       # User management routes
-│   ├── leads.ts       # Lead management routes
-│   ├── contacts.ts    # Contact management routes
-│   ├── tasks.ts       # Task management routes
-│   ├── appointments.ts # Appointment management routes
-│   ├── portal.ts      # Portal user routes
-│   └── index.ts       # Route exports
-├── rules/             # Rule engine system
-│   ├── engine.ts      # Rule evaluation logic
-│   └── routes.ts      # Rule management API
 ├── automation/        # Workflow automation system
-├── utils/             # Utility functions
-├── types/             # TypeScript type definitions
-├── config/            # Configuration files
-├── index.ts           # Server entry point
-├── routes.ts          # Main route registration
-├── storage.ts         # Database abstraction layer
-├── db.ts              # Database connection setup
-└── vite.ts            # Development server integration
+├── controllers/       # Route handlers and business logic (README provided)
+├── middleware/        # Express middleware (authentication, validation)
+├── models/           # Database models and queries (README provided)
+├── routes/           # Organized route definitions by domain
+├── rules/            # Rule engine system for permissions
+├── services/         # Business logic services (README provided)
+├── types/            # TypeScript type definitions (README provided)
+├── utils/            # Utility functions and helpers (README provided)
+├── config/           # Configuration files and settings (README provided)
+├── index.ts          # Server entry point
+├── routes.ts         # Main route registration
+├── storage.ts        # Database abstraction layer
+├── db.ts             # Database connection setup
+├── vite.ts           # Development server integration
+└── README.md         # This overview file
 ```
 
-## Benefits of This Structure:
+## Directory Purposes
 
-1. **Clear Separation of Concerns**: Each route file handles a specific domain
-2. **Easy Maintenance**: Routes are organized by feature, not mixed together
-3. **Scalability**: Easy to add new features without cluttering main files
-4. **Developer Experience**: Easy to find and modify specific functionality
-5. **Consistent Structure**: All routes follow the same pattern and structure
-6. **Proper Middleware Organization**: Authentication and validation logic separated
-7. **Reusable Components**: Services and utilities can be shared across routes
+### 🎯 **controllers/** - Business Logic Handlers
+Route handlers and business logic controllers that process requests and coordinate between services.
+- **When to use**: Complex business logic, multi-step operations, request coordination
+- **Examples**: Lead qualification, appointment scheduling, care plan creation
 
-## Current File Responsibilities:
+### 🛡️ **middleware/** - Request Processing
+Express middleware for authentication, validation, and request preprocessing.
+- **When to use**: Cross-cutting concerns, authentication, request validation
+- **Examples**: Portal authentication, permission checking, input validation
 
-### `index.ts`
-- Express server setup
-- Middleware configuration
-- Server startup
+### 🗄️ **models/** - Data Access Layer
+Database models and complex query operations using Drizzle ORM.
+- **When to use**: Complex queries, data relationships, performance optimization
+- **Examples**: Lead analytics, appointment availability, patient journey tracking
 
-### `routes.ts`
-- API endpoint definitions
-- Request/response handling
-- Route-level validation
+### 🛤️ **routes/** - API Endpoints
+Organized route definitions by domain (users, leads, contacts, etc.).
+- **When to use**: API endpoint definitions, simple CRUD operations
+- **Examples**: REST endpoints for each entity type
 
-### `storage.ts`
-- Database abstraction interface
-- CRUD operations
-- Data access layer
+### 📋 **rules/** - Permission Engine
+Rule-based permission system for dynamic access control.
+- **When to use**: Complex permission logic, dynamic access rules
+- **Examples**: Role-based access, time-based permissions, entity ownership
 
-### `db.ts`
-- Database connection
-- Drizzle ORM configuration
+### 🔧 **services/** - Business Services
+Complex business logic and external integrations.
+- **When to use**: Business calculations, external APIs, complex workflows
+- **Examples**: Lead scoring, appointment notifications, health assessments
 
-### `vite.ts`
-- Development server integration
-- Hot reload support
+### 🏷️ **types/** - Type Definitions
+TypeScript interfaces and type definitions for the application.
+- **When to use**: Complex data structures, API contracts, type safety
+- **Examples**: User interfaces, health data types, API response types
+
+### 🛠️ **utils/** - Helper Functions
+Utility functions and helpers used throughout the application.
+- **When to use**: Common functionality, data formatting, calculations
+- **Examples**: Date formatting, validation, encryption, health calculations
+
+### ⚙️ **config/** - Application Configuration
+Configuration files and environment-specific settings.
+- **When to use**: Environment settings, feature flags, third-party configurations
+- **Examples**: Database settings, authentication config, scheduling rules
+
+## Architecture Flow
+
+```
+Request → routes/ → controllers/ → services/ → models/ → Database
+    ↓         ↓           ↓           ↓
+middleware/  utils/     config/    types/
+```
+
+## Key Files
+
+### Core Application Files
+- **`index.ts`** - Express server setup and startup
+- **`routes.ts`** - Main route registration and organization
+- **`storage.ts`** - Database abstraction layer with comprehensive interface
+- **`db.ts`** - Database connection and Drizzle ORM setup
+- **`vite.ts`** - Development server integration
+
+### Feature Systems
+- **`automation/`** - Complete workflow automation system
+- **`rules/`** - Rule-based permission system with visual builder
+
+## Development Guidelines
+
+### When to Create New Files
+
+1. **Controllers**: When route handlers exceed 20 lines or need complex business logic
+2. **Services**: When business logic needs to be shared or involves external integrations
+3. **Models**: When you need complex queries or data relationships
+4. **Utils**: When functions are used in multiple places
+5. **Types**: When you have complex data structures or API contracts
+
+### Code Organization Principles
+
+1. **Separation of Concerns**: Each directory has a specific responsibility
+2. **Domain-Driven**: Files organized by business domain (users, leads, contacts)
+3. **Layer Architecture**: Clear separation between routes, business logic, and data access
+4. **Dependency Direction**: Higher layers depend on lower layers, not vice versa
+
+## Healthcare CRM Specific Features
+
+### Patient Data Management
+- HIPAA-compliant data handling
+- Secure patient portal access
+- Health questionnaire processing
+- Care plan coordination
+
+### Lead Management
+- Lead qualification and scoring
+- Automated assignment to SDRs
+- Permission-based visibility
+- Conversion tracking
+
+### Appointment Scheduling
+- Intelligent scheduling algorithms
+- Automated reminders
+- Calendar integration
+- Availability management
+
+### Workflow Automation
+- Visual workflow builder
+- Rule-based automation
+- Trigger and action system
+- Business process automation
+
+### Analytics and Reporting
+- Patient journey analytics
+- Provider performance metrics
+- Conversion rate tracking
+- Health outcome analysis
+
+## Best Practices
+
+1. **Type Safety**: Use TypeScript throughout for better reliability
+2. **Error Handling**: Consistent error handling patterns
+3. **Logging**: Comprehensive logging for debugging and compliance
+4. **Testing**: Unit tests for services and utilities
+5. **Documentation**: Clear README files for each directory
+6. **Security**: HIPAA compliance and data protection
+7. **Performance**: Optimized queries and caching strategies
+
+## Getting Started
+
+1. **Review Directory READMEs**: Each directory has detailed documentation
+2. **Follow Patterns**: Use existing patterns for consistency
+3. **Start Small**: Begin with simple implementations and grow complexity
+4. **Test Thoroughly**: Especially important for healthcare applications
+5. **Document Changes**: Keep documentation updated as you develop
+
+This structure provides a solid foundation for a scalable, maintainable healthcare CRM system with clear separation of concerns and comprehensive documentation.
