@@ -55,7 +55,7 @@ export default function Leads() {
     queryKey: ["/api/leads/my-leads", currentUser?.id],
     enabled: !!currentUser?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/leads/my-leads/${currentUser!.id}?userRole=${currentUser!.role.toLowerCase()}`);
+      const response = await fetch(`/api/leads/my-leads/${currentUser!.id}?userRole=${currentUser!.role}`);
       if (!response.ok) {
         throw new Error('Failed to fetch my leads');
       }
@@ -69,7 +69,7 @@ export default function Leads() {
     queryKey: ["/api/leads/open-leads", currentUser?.id],
     enabled: !!currentUser?.id,
     queryFn: async () => {
-      const response = await fetch(`/api/leads/open-leads/${currentUser!.id}?userRole=${currentUser!.role.toLowerCase()}`);
+      const response = await fetch(`/api/leads/open-leads/${currentUser!.id}?userRole=${currentUser!.role}`);
       if (!response.ok) {
         throw new Error('Failed to fetch open leads');
       }

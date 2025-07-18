@@ -38,7 +38,7 @@ export const DEFAULT_PERMISSIONS: GlobalPermissions = {
   adminCanSeeAllRecords: true,
 };
 
-export type UserRole = 'SDR' | 'health_coach' | 'admin';
+export type UserRole = 'SDR' | 'Health Coach' | 'Admin';
 export type EntityType = 'lead' | 'contact';
 
 // Permission checker functions
@@ -51,7 +51,7 @@ export function canUserSeeEntity(
   permissions: GlobalPermissions = DEFAULT_PERMISSIONS
 ): boolean {
   // Admin can see everything
-  if (userRole === 'admin' && permissions.adminCanSeeAllRecords) {
+  if (userRole === 'Admin' && permissions.adminCanSeeAllRecords) {
     return true;
   }
 
@@ -73,7 +73,7 @@ export function canUserSeeEntity(
       }
     }
     
-    if (userRole === 'health_coach') {
+    if (userRole === 'Health Coach') {
       // Health Coach can see their own assigned leads
       if (isAssignedToUser && permissions.healthCoachCanSeeOwnAssignedLeads) {
         return true;
@@ -98,7 +98,7 @@ export function canUserSeeEntity(
       }
     }
     
-    if (userRole === 'health_coach') {
+    if (userRole === 'Health Coach') {
       // Health Coach can see their own assigned contacts
       if (isAssignedToUser && permissions.healthCoachCanSeeOwnAssignedContacts) {
         return true;
@@ -127,7 +127,7 @@ export function canUserClaimEntity(
   }
 
   // Admin can claim anything
-  if (userRole === 'admin' && permissions.adminCanSeeAllRecords) {
+  if (userRole === 'Admin' && permissions.adminCanSeeAllRecords) {
     return { canClaim: true };
   }
 
@@ -136,7 +136,7 @@ export function canUserClaimEntity(
       return { canClaim: true };
     }
     
-    if (userRole === 'health_coach' && permissions.healthCoachCanSeeUnassignedLeadsAfterHours > 0) {
+    if (userRole === 'Health Coach' && permissions.healthCoachCanSeeUnassignedLeadsAfterHours > 0) {
       const hoursElapsed = (Date.now() - entityCreatedAt.getTime()) / (1000 * 60 * 60);
       if (hoursElapsed >= permissions.healthCoachCanSeeUnassignedLeadsAfterHours) {
         return { canClaim: true };
@@ -155,7 +155,7 @@ export function canUserClaimEntity(
       return { canClaim: true };
     }
     
-    if (userRole === 'health_coach' && permissions.healthCoachCanSeeAllContacts) {
+    if (userRole === 'Health Coach' && permissions.healthCoachCanSeeAllContacts) {
       return { canClaim: true };
     }
   }
