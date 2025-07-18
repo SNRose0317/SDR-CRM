@@ -403,18 +403,21 @@ export class DatabaseStorage implements IStorage {
     if (filters?.status) {
       conditions.push(eq(appointments.status, filters.status));
     }
-    if (filters?.attendeeId) {
-      conditions.push(eq(appointments.attendeeId, filters.attendeeId));
+    if (filters?.userId) {
+      conditions.push(eq(appointments.userId, filters.userId));
+    }
+    if (filters?.leadId) {
+      conditions.push(eq(appointments.leadId, filters.leadId));
     }
     if (filters?.contactId) {
       conditions.push(eq(appointments.contactId, filters.contactId));
     }
     
     if (conditions.length > 0) {
-      return await db.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.startTime));
+      return await db.select().from(appointments).where(and(...conditions)).orderBy(desc(appointments.scheduledAt));
     }
     
-    return await db.select().from(appointments).orderBy(desc(appointments.startTime));
+    return await db.select().from(appointments).orderBy(desc(appointments.scheduledAt));
   }
 
   async getAppointment(id: number): Promise<Appointment | undefined> {
@@ -431,7 +434,7 @@ export class DatabaseStorage implements IStorage {
       entityId: result[0].id,
       action: 'created',
       details: `Appointment "${result[0].title}" scheduled`,
-      userId: appointmentData.attendeeId
+      userId: appointmentData.userId
     });
     
     return result[0];
@@ -450,7 +453,7 @@ export class DatabaseStorage implements IStorage {
       entityId: id,
       action: 'updated',
       details: `Appointment updated`,
-      userId: appointmentData.attendeeId || null
+      userId: appointmentData.userId || null
     });
     
     return result[0];

@@ -181,20 +181,25 @@ export const appointments = pgTable("appointments", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
   description: text("description"),
-  startTime: timestamp("start_time").notNull(),
-  endTime: timestamp("end_time").notNull(),
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  duration: integer("duration"), // Duration in minutes
   status: appointmentStatusEnum("status").notNull().default("scheduled"),
-  attendeeId: integer("attendee_id").references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
+  leadId: integer("lead_id").references(() => leads.id),
   contactId: integer("contact_id").references(() => contacts.id),
-  location: varchar("location"),
+  meetingLink: varchar("meeting_link"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const appointmentsRelations = relations(appointments, ({ one }) => ({
-  attendee: one(users, {
-    fields: [appointments.attendeeId],
+  user: one(users, {
+    fields: [appointments.userId],
     references: [users.id],
+  }),
+  lead: one(leads, {
+    fields: [appointments.leadId],
+    references: [leads.id],
   }),
   contact: one(contacts, {
     fields: [appointments.contactId],
@@ -317,8 +322,7 @@ export const insertAppointmentSchema = createInsertSchema(appointments).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  startTime: z.string().transform((val) => new Date(val)),
-  endTime: z.string().transform((val) => new Date(val)),
+  scheduledAt: z.string().transform((val) => new Date(val)),
 });
 
 export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({

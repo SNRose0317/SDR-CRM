@@ -40,19 +40,17 @@ export function AppointmentBooking({ hhqId, leadId, onComplete }: AppointmentBoo
       const [hours, minutes] = selectedTime.split(":");
       const appointmentDate = new Date(selectedDate);
       appointmentDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      
-      const endTime = new Date(appointmentDate);
-      endTime.setHours(endTime.getHours() + 1); // 1 hour appointment
 
       // First create the appointment
       const appointmentResponse = await apiRequest("POST", "/api/appointments", {
         title: "Initial Health Consultation",
         description: "Health History Questionnaire Follow-up",
-        startTime: appointmentDate.toISOString(),
-        endTime: endTime.toISOString(),
-        attendeeId: parseInt(selectedCoach),
+        scheduledAt: appointmentDate.toISOString(),
+        duration: 60, // 1 hour appointment in minutes
+        userId: parseInt(selectedCoach),
+        leadId: leadId,
         contactId: null, // Will be updated when lead converts to contact
-        location: "Virtual",
+        meetingLink: "https://zoom.us/j/example", // Placeholder meeting link
       });
       
       const appointment = await appointmentResponse.json();
