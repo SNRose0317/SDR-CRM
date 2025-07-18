@@ -34,6 +34,7 @@ export enum NodeType {
   TRIGGER_PORTAL_SIGNUP = 'trigger_portal_signup',
   TRIGGER_LEAD_CREATED = 'trigger_lead_created',
   TRIGGER_STATUS_CHANGED = 'trigger_status_changed',
+  TRIGGER_HHQ_STATUS_CHANGED = 'trigger_hhq_status_changed',
   TRIGGER_SCHEDULE = 'trigger_schedule',
   TRIGGER_WEBHOOK = 'trigger_webhook',
   

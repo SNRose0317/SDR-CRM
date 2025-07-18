@@ -5,7 +5,7 @@ export interface BusinessUserType {
   id: string;
   name: string;
   description: string;
-  systemEntity: 'user' | 'lead' | 'contact';
+  systemEntity: 'user' | 'lead' | 'contact' | 'hhq';
   availableStatuses: string[];
   defaultStatus: string;
   icon: string;
@@ -15,7 +15,7 @@ export interface BusinessUserType {
 export interface BusinessStatus {
   id: string;
   name: string;
-  category: 'lead' | 'contact' | 'task' | 'appointment';
+  category: 'lead' | 'contact' | 'task' | 'appointment' | 'hhq';
   description: string;
   nextStatuses: string[];
   assignableRoles: string[];
@@ -127,6 +127,16 @@ export const BUSINESS_USER_TYPES: BusinessUserType[] = [
     defaultStatus: 'new',
     icon: '🏥',
     color: '#10b981'
+  },
+  {
+    id: 'hhq',
+    name: 'HHQ',
+    description: 'Health History Questionnaire workflow',
+    systemEntity: 'hhq',
+    availableStatuses: ['Created', 'Submitted', 'Signed', 'Paid', 'Appointment Booked', 'Completed'],
+    defaultStatus: 'Created',
+    icon: '📋',
+    color: '#06b6d4'
   }
 ];
 
@@ -182,6 +192,67 @@ export const BUSINESS_STATUSES: BusinessStatus[] = [
     assignableRoles: ['health_coach'],
     icon: '💰',
     color: '#8b5cf6'
+  },
+  // HHQ Status States
+  {
+    id: 'hhq_created',
+    name: 'HHQ Created',
+    category: 'hhq',
+    description: 'Health History Questionnaire has been created',
+    nextStatuses: ['hhq_submitted'],
+    assignableRoles: ['sdr', 'health_coach'],
+    icon: '📋',
+    color: '#6b7280'
+  },
+  {
+    id: 'hhq_submitted',
+    name: 'HHQ Submitted',
+    category: 'hhq',
+    description: 'Health questions completed, awaiting signature',
+    nextStatuses: ['hhq_signed'],
+    assignableRoles: ['sdr', 'health_coach'],
+    icon: '📝',
+    color: '#3b82f6'
+  },
+  {
+    id: 'hhq_signed',
+    name: 'HHQ Signed',
+    category: 'hhq',
+    description: 'Questionnaire signed electronically',
+    nextStatuses: ['hhq_paid'],
+    assignableRoles: ['health_coach'],
+    icon: '✍️',
+    color: '#10b981'
+  },
+  {
+    id: 'hhq_paid',
+    name: 'HHQ Paid',
+    category: 'hhq',
+    description: 'Payment processed successfully',
+    nextStatuses: ['hhq_appointment_booked'],
+    assignableRoles: ['health_coach'],
+    icon: '💳',
+    color: '#f59e0b'
+  },
+  {
+    id: 'hhq_appointment_booked',
+    name: 'HHQ Appointment Booked',
+    category: 'hhq',
+    description: 'Initial consultation scheduled',
+    nextStatuses: ['hhq_completed'],
+    assignableRoles: ['health_coach'],
+    icon: '📅',
+    color: '#8b5cf6'
+  },
+  {
+    id: 'hhq_completed',
+    name: 'HHQ Completed',
+    category: 'hhq',
+    description: 'Full HHQ workflow completed',
+    nextStatuses: [],
+    assignableRoles: ['health_coach'],
+    icon: '✅',
+    color: '#10b981'
   }
 ];
 
@@ -405,6 +476,35 @@ export const BUSINESS_TRIGGERS: BusinessTrigger[] = [
     ],
     icon: '⏱️',
     color: '#f59e0b'
+  },
+  {
+    id: 'hhq_status_changed',
+    name: 'HHQ Status Changed',
+    description: 'When HHQ status changes (Created → Signed → Paid → Appointment Booked)',
+    category: 'status_change',
+    applicableUserTypes: ['hhq'],
+    conditions: [
+      {
+        id: 'from_hhq_status',
+        name: 'From HHQ Status',
+        description: 'Previous HHQ status',
+        field: 'previous_hhq_status',
+        operator: 'equals',
+        valueType: 'user_select',
+        businessLabel: 'From HHQ status'
+      },
+      {
+        id: 'to_hhq_status',
+        name: 'To HHQ Status',
+        description: 'New HHQ status',
+        field: 'current_hhq_status',
+        operator: 'equals',
+        valueType: 'user_select',
+        businessLabel: 'To HHQ status'
+      }
+    ],
+    icon: '📋',
+    color: '#06b6d4'
   }
 ];
 
@@ -429,6 +529,26 @@ export const BUSINESS_WORKFLOW_TEMPLATES: BusinessWorkflowTemplate[] = [
     },
     icon: '🎯',
     color: '#3b82f6'
+  },
+  {
+    id: 'hhq_signed_workflow',
+    name: 'HHQ Signed → Lead Status Update',
+    description: 'When HHQ is signed, update lead status to HHQ Signed and create follow-up task',
+    category: 'lead_management',
+    targetRole: 'sdr',
+    scenario: 'When HHQ status changes to Signed, update lead status and create follow-up task',
+    estimatedTime: '1 minute',
+    complexity: 'simple',
+    workflow: {
+      trigger: BUSINESS_TRIGGERS[3], // hhq_status_changed
+      actions: [
+        BUSINESS_ACTIONS[3], // update_status
+        BUSINESS_ACTIONS[2]  // create_follow_up_task
+      ],
+      conditions: []
+    },
+    icon: '📋',
+    color: '#06b6d4'
   },
   {
     id: 'hhq_started_workflow',

@@ -129,6 +129,42 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
       case NodeType.TRIGGER_PORTAL_SIGNUP:
         return <UserConfiguration data={data} onUpdate={handleNodePropertyChange} />;
 
+      case NodeType.TRIGGER_HHQ_STATUS_CHANGED:
+        return (
+          <div className="space-y-4">
+            <h4 className="font-medium text-gray-900 dark:text-white">HHQ Status Trigger</h4>
+            <div className="space-y-3">
+              <div>
+                <Label>Status Change</Label>
+                <Select
+                  value={data.config.triggerParameters?.hhqStatus || 'Signed'}
+                  onValueChange={(value) => handleNodePropertyChange('data.config.triggerParameters.hhqStatus', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select HHQ status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Created">Created</SelectItem>
+                    <SelectItem value="Submitted">Submitted</SelectItem>
+                    <SelectItem value="Signed">Signed</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                    <SelectItem value="Appointment Booked">Appointment Booked</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Input
+                  value={data.config.triggerParameters?.description || `When HHQ status changes to ${data.config.triggerParameters?.hhqStatus || 'Signed'}`}
+                  onChange={(e) => handleNodePropertyChange('data.config.triggerParameters.description', e.target.value)}
+                  placeholder="Describe what triggers this workflow"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
       case NodeType.ACTION_UPDATE_STATUS:
         return (
           <div className="space-y-4">
@@ -146,6 +182,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                   <SelectContent>
                     <SelectItem value="lead">Lead</SelectItem>
                     <SelectItem value="contact">Contact</SelectItem>
+                    <SelectItem value="hhq">HHQ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -160,12 +197,38 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="New">New</SelectItem>
-                    <SelectItem value="HHQ Started">HHQ Started</SelectItem>
-                    <SelectItem value="HHQ Signed">HHQ Signed</SelectItem>
-                    <SelectItem value="Booking: Not Paid">Booking: Not Paid</SelectItem>
-                    <SelectItem value="Booking: Paid/Not Booked">Booking: Paid/Not Booked</SelectItem>
-                    <SelectItem value="Booking: Paid/Booked">Booking: Paid/Booked</SelectItem>
+                    {/* Lead Status Options */}
+                    {data.config.actionParameters?.entityType === 'lead' && (
+                      <>
+                        <SelectItem value="New">New</SelectItem>
+                        <SelectItem value="HHQ Started">HHQ Started</SelectItem>
+                        <SelectItem value="HHQ Signed">HHQ Signed</SelectItem>
+                        <SelectItem value="Booking: Not Paid">Booking: Not Paid</SelectItem>
+                        <SelectItem value="Booking: Paid/Not Booked">Booking: Paid/Not Booked</SelectItem>
+                        <SelectItem value="Booking: Paid/Booked">Booking: Paid/Booked</SelectItem>
+                      </>
+                    )}
+                    {/* HHQ Status Options */}
+                    {data.config.actionParameters?.entityType === 'hhq' && (
+                      <>
+                        <SelectItem value="Created">Created</SelectItem>
+                        <SelectItem value="Submitted">Submitted</SelectItem>
+                        <SelectItem value="Signed">Signed</SelectItem>
+                        <SelectItem value="Paid">Paid</SelectItem>
+                        <SelectItem value="Appointment Booked">Appointment Booked</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                      </>
+                    )}
+                    {/* Contact Status Options */}
+                    {data.config.actionParameters?.entityType === 'contact' && (
+                      <>
+                        <SelectItem value="Intake">Intake</SelectItem>
+                        <SelectItem value="Initial Labs">Initial Labs</SelectItem>
+                        <SelectItem value="Initial Lab Review">Initial Lab Review</SelectItem>
+                        <SelectItem value="Initial Provider Exam">Initial Provider Exam</SelectItem>
+                        <SelectItem value="Initial Medication Order">Initial Medication Order</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

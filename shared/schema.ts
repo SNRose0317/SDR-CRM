@@ -18,6 +18,7 @@ import { relations } from "drizzle-orm";
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["sdr", "health_coach", "admin", "patient"]);
 export const leadStatusEnum = pgEnum("lead_status", ["New", "HHQ Started", "HHQ Signed", "Booking: Not Paid", "Booking: Paid/Not Booked", "Booking: Paid/Booked"]);
+export const hhqStatusEnum = pgEnum("hhq_status", ["Created", "Submitted", "Signed", "Paid", "Appointment Booked", "Completed"]);
 export const contactStageEnum = pgEnum("contact_stage", [
   "Intake",
   "Initial Labs",
@@ -205,6 +206,7 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
 export const healthQuestionnaires = pgTable("health_questionnaires", {
   id: serial("id").primaryKey(),
   leadId: integer("lead_id").references(() => leads.id).notNull(),
+  status: hhqStatusEnum("status").notNull().default("Created"),
   energyLevel: integer("energy_level").notNull(), // 1-10 scale
   libidoLevel: integer("libido_level").notNull(), // 1-10 scale
   overallHealth: integer("overall_health").notNull(), // 1-10 scale

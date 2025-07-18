@@ -72,6 +72,16 @@ const nodeCategories: NodeCategory[] = [
         inputs: [{ id: 'input', name: 'Input', type: 'data' as const, required: true }],
         outputs: [{ id: 'output', name: 'Output', type: 'data' as const, required: true }],
       },
+      {
+        type: NodeType.TRIGGER_HHQ_STATUS_CHANGED,
+        name: 'HHQ STATUS CHANGED',
+        description: 'When HHQ status changes (Created → Signed → Paid → Appointment Booked)',
+        icon: '📋',
+        color: '#f59e0b',
+        defaultConfig: { triggerType: 'hhq_status_changed', hhqStatus: 'Signed' },
+        inputs: [],
+        outputs: [{ id: 'output', name: 'Output', type: 'data' as const, required: true }],
+      },
     ],
   },
   {

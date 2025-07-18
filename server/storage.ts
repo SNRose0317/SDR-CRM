@@ -647,7 +647,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createHealthQuestionnaire(data: InsertHealthQuestionnaire): Promise<HealthQuestionnaire> {
-    const result = await db.insert(healthQuestionnaires).values(data).returning();
+    const result = await db.insert(healthQuestionnaires).values({
+      ...data,
+      status: 'Submitted' // Status changes from Created to Submitted when form is filled
+    }).returning();
     
     // Log activity
     await this.createActivityLog({
@@ -668,6 +671,7 @@ export class DatabaseStorage implements IStorage {
         isSigned: true,
         signedAt: new Date(),
         signatureData: signatureData || null,
+        status: 'Signed',
         updatedAt: new Date()
       })
       .where(eq(healthQuestionnaires.id, questionnaireId))
@@ -699,6 +703,7 @@ export class DatabaseStorage implements IStorage {
         isPaid: true,
         paidAt: new Date(),
         paymentAmount: amount.toString(),
+        status: 'Paid',
         updatedAt: new Date()
       })
       .where(eq(healthQuestionnaires.id, questionnaireId))
@@ -729,6 +734,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         appointmentBooked: true,
         appointmentId: appointmentId,
+        status: 'Appointment Booked',
         updatedAt: new Date()
       })
       .where(eq(healthQuestionnaires.id, questionnaireId))
