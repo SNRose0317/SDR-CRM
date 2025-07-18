@@ -90,20 +90,15 @@ export default function PortalSignup({ onBackToLogin }: PortalSignupProps) {
     setIsLoading(true);
     
     try {
-      await apiRequest('/api/portal/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          phone,
-          state,
-          password,
-        }),
+      const response = await apiRequest('POST', '/api/portal/signup', {
+        firstName,
+        lastName,
+        email,
+        phone,
+        state,
+        password,
       });
+      await response.json();
 
       toast({
         title: "Success!",
