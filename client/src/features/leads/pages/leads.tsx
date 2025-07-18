@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import DataTable from "@/shared/components/data-display/data-table";
 import LeadForm from "@/features/leads/components/lead-form";
-import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText, UserPlus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from "@shared/schema";
@@ -104,10 +104,39 @@ export default function Leads() {
     },
   });
 
+  const claimLeadMutation = useMutation({
+    mutationFn: async (leadId: number) => {
+      if (!currentUser) throw new Error("No current user");
+      await apiRequest("PUT", `/api/leads/${leadId}`, {
+        ownerId: currentUser.id
+      });
+    },
+    onSuccess: () => {
+      // Invalidate both tab queries to refresh the lists
+      queryClient.invalidateQueries({ queryKey: ["/api/leads/my-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
+      toast({
+        title: "Success",
+        description: "Lead claimed successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this lead?")) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleClaimLead = (leadId: number) => {
+    claimLeadMutation.mutate(leadId);
   };
 
   const handleEdit = (lead: Lead) => {
@@ -204,34 +233,48 @@ export default function Leads() {
       key: "actions",
       label: "Actions",
       render: (_: any, row: Lead) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleStartHHQ(row)}>
-              <FileText className="w-4 h-4 mr-2" />
-              Start HHQ
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleEdit(row)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Eye className="w-4 h-4 mr-2" />
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => handleDelete(row.id)}
-              className="text-destructive"
+        <div className="flex items-center space-x-2">
+          {/* Show Claim Lead button for unassigned leads in Open Leads tab */}
+          {activeTab === "open-leads" && !row.ownerId && (
+            <Button 
+              onClick={() => handleClaimLead(row.id)}
+              size="sm"
+              variant="outline"
+              disabled={claimLeadMutation.isPending}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <UserPlus className="w-4 h-4 mr-1" />
+              Claim Lead
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleStartHHQ(row)}>
+                <FileText className="w-4 h-4 mr-2" />
+                Start HHQ
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEdit(row)}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Eye className="w-4 h-4 mr-2" />
+                View
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleDelete(row.id)}
+                className="text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     },
   ];
