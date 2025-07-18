@@ -165,7 +165,7 @@ export const BUSINESS_STATUSES: BusinessStatus[] = [
   },
   {
     id: 'booking_needs_scheduling',
-    name: 'Booking: Needs Scheduling',
+    name: 'Booking: Paid/Not Booked',
     category: 'lead',
     description: 'Ready to schedule initial consultation',
     nextStatuses: ['booking_paid_booked'],

@@ -163,8 +163,9 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                     <SelectItem value="New">New</SelectItem>
                     <SelectItem value="HHQ Started">HHQ Started</SelectItem>
                     <SelectItem value="HHQ Signed">HHQ Signed</SelectItem>
-                    <SelectItem value="Booking: Needs Scheduling">Booking: Needs Scheduling</SelectItem>
-                    <SelectItem value="Booking: Paid/ booked">Booking: Paid/ booked</SelectItem>
+                    <SelectItem value="Booking: Not Paid">Booking: Not Paid</SelectItem>
+                    <SelectItem value="Booking: Paid/Not Booked">Booking: Paid/Not Booked</SelectItem>
+                    <SelectItem value="Booking: Paid/Booked">Booking: Paid/Booked</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

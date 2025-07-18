@@ -716,7 +716,7 @@ export class DatabaseStorage implements IStorage {
     
     // Update lead status when payment is made
     await this.updateLead(hhq.leadId, {
-      status: 'Booking: Needs Scheduling'
+      status: 'Booking: Paid/Not Booked'
     });
     
     return hhq;
@@ -746,7 +746,7 @@ export class DatabaseStorage implements IStorage {
     
     // Update lead status when appointment is booked
     await this.updateLead(hhq.leadId, {
-      status: 'Booking: Paid/ booked'
+      status: 'Booking: Paid/Booked'
     });
     
     return hhq;
