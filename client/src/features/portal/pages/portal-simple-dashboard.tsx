@@ -13,8 +13,21 @@ export default function PortalSimpleDashboard() {
 
   // Check if user has HHQ and its status
   const { data: hhqStatus } = useQuery({
-    queryKey: ['/api/portal/hhq/status'],
-    enabled: !!profile?.id,
+    queryKey: ['portal', 'hhq', 'status'],
+    queryFn: async () => {
+      const token = localStorage.getItem('portalToken');
+      if (!token) throw new Error('No token');
+      
+      const response = await fetch('/api/portal/hhq/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch HHQ status');
+      return response.json();
+    },
+    enabled: !!profile?.id && !!localStorage.getItem('portalToken'),
   });
 
   if (isLoading) return <LoadingSpinner />;

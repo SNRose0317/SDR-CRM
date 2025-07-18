@@ -6,7 +6,8 @@ import {
   activityLogs,
   leads,
   contacts,
-  healthQuestionnaires
+  healthQuestionnaires,
+  portalSessions
 } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { signupSchema } from '@shared/schema';
@@ -236,6 +237,20 @@ router.get('/hhq/status', portalAuth, async (req: any, res) => {
   } catch (error) {
     console.error('HHQ status error:', error);
     res.status(500).json({ error: 'Failed to fetch HHQ status' });
+  }
+});
+
+// Portal logout endpoint
+router.post('/logout', portalAuth, async (req: any, res) => {
+  try {
+    const sessionToken = req.headers.authorization?.replace('Bearer ', '');
+    if (sessionToken) {
+      await db.delete(portalSessions).where(eq(portalSessions.sessionToken, sessionToken));
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Failed to logout' });
   }
 });
 

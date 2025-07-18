@@ -55,11 +55,35 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
   // Create HHQ mutation
   const createHhqMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", "/api/hhq", {
-        ...data,
-        leadId: actualLeadId,
-      });
-      return response.json();
+      if (isPortalFlow) {
+        const token = localStorage.getItem('portalToken');
+        if (!token) throw new Error('No authentication token');
+        
+        const response = await fetch('/api/hhq', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            ...data,
+            leadId: actualLeadId,
+          }),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to create HHQ');
+        }
+        
+        return response.json();
+      } else {
+        const response = await apiRequest("POST", "/api/hhq", {
+          ...data,
+          leadId: actualLeadId,
+        });
+        return response.json();
+      }
     },
     onSuccess: (data) => {
       setHhqData(data);

@@ -36,7 +36,7 @@ export function usePortalAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-      const response = await fetch('/api/portal/auth/login', {
+      const response = await fetch('/api/portal/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export function usePortalAuth() {
     mutationFn: async () => {
       const token = getStoredToken();
       if (token) {
-        await fetch('/api/portal/auth/logout', {
+        await fetch('/api/portal/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
