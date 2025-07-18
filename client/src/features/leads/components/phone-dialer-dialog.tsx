@@ -58,9 +58,9 @@ interface Lead {
 }
 
 interface PhoneDialerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  initialLeads: Lead[];
+  isOpen: boolean;
+  onClose: () => void;
+  leads: Lead[];
   currentUser?: any;
 }
 
@@ -72,12 +72,20 @@ const readinessColors = {
 };
 
 export function PhoneDialerDialog({ 
-  open, 
-  onOpenChange, 
-  initialLeads, 
+  isOpen, 
+  onClose, 
+  leads: initialLeads, 
   currentUser 
 }: PhoneDialerDialogProps) {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [leads, setLeads] = useState<Lead[]>(initialLeads || []);
+  
+  // Update leads when initialLeads prop changes
+  useEffect(() => {
+    if (initialLeads) {
+      setLeads(initialLeads);
+      setCurrentIndex(0); // Reset to first lead when new leads are loaded
+    }
+  }, [initialLeads]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoDialerEnabled, setAutoDialerEnabled] = useState(false);
   const [autoDialerDelay, setAutoDialerDelay] = useState(10);
@@ -88,8 +96,8 @@ export function PhoneDialerDialog({
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const { toast } = useToast();
 
-  const currentLead = leads[currentIndex];
-  const remainingLeads = leads.slice(currentIndex + 1);
+  const currentLead = leads && leads.length > 0 ? leads[currentIndex] : null;
+  const remainingLeads = leads && leads.length > 0 ? leads.slice(currentIndex + 1) : [];
 
   // Timer for call duration
   useEffect(() => {
@@ -212,7 +220,7 @@ export function PhoneDialerDialog({
 
   if (!currentLead) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Phone Dialer - Session Complete</DialogTitle>
@@ -221,7 +229,7 @@ export function PhoneDialerDialog({
             <Phone className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-medium mb-2">All leads contacted</h3>
             <p className="text-muted-foreground mb-4">You have completed calling all leads in your queue.</p>
-            <Button onClick={() => onOpenChange(false)}>Close Dialer</Button>
+            <Button onClick={onClose}>Close Dialer</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -229,7 +237,7 @@ export function PhoneDialerDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0">
         <DialogHeader className="p-6 pb-0">
           <div className="flex items-center justify-between">
