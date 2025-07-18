@@ -85,7 +85,7 @@ router.post("/:id/book-appointment", async (req, res) => {
 router.get("/health-coaches", async (req, res) => {
   try {
     const healthCoaches = await storage.getUsers();
-    const coaches = healthCoaches.filter(user => user.role === 'health_coach');
+    const coaches = healthCoaches.filter(user => user.role === 'Health Coach');
     res.json(coaches);
   } catch (error: any) {
     console.error("Error fetching health coaches:", error);
