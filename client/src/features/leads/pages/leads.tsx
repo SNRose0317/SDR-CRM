@@ -9,7 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import DataTable from "@/shared/components/data-display/data-table";
 import LeadForm from "@/features/leads/components/lead-form";
-import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText, UserPlus } from "lucide-react";
+import { PhoneDialerDialog } from "@/features/leads/components/phone-dialer-dialog";
+import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText, UserPlus, Phone, PhoneCall } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from "@shared/schema";
@@ -32,6 +33,8 @@ export default function Leads() {
   const [isHHQOpen, setIsHHQOpen] = useState(false);
   const [hhqLead, setHhqLead] = useState<Lead | null>(null);
   const [activeTab, setActiveTab] = useState<"my-leads" | "open-leads">("my-leads");
+  const [isDialerOpen, setIsDialerOpen] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -344,6 +347,13 @@ export default function Leads() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => {
+                setSelectedLeads([row]);
+                setIsDialerOpen(true);
+              }}>
+                <PhoneCall className="w-4 h-4 mr-2" />
+                Call Lead
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleStartHHQ(row)}>
                 <FileText className="w-4 h-4 mr-2" />
                 Start HHQ
@@ -412,6 +422,26 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Lead Management</h2>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              const currentLeads = activeTab === "my-leads" ? myLeads : openLeads;
+              if (currentLeads && currentLeads.length > 0) {
+                setSelectedLeads(currentLeads);
+                setIsDialerOpen(true);
+              } else {
+                toast({
+                  title: "No leads available",
+                  description: "There are no leads to dial in this tab.",
+                  variant: "destructive",
+                });
+              }
+            }}
+            variant="outline"
+            disabled={!leads || leads.length === 0}
+          >
+            <PhoneCall className="w-4 h-4 mr-2" />
+            Bulk Dialer
+          </Button>
           <EntityAssignment currentUser={currentUser} entityType="leads" />
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
@@ -495,6 +525,14 @@ export default function Leads() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Phone Dialer Dialog */}
+      <PhoneDialerDialog
+        isOpen={isDialerOpen}
+        onClose={() => setIsDialerOpen(false)}
+        leads={selectedLeads}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

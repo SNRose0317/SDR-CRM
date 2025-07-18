@@ -11,7 +11,8 @@ import {
   appointmentRoutes,
   portalRoutes,
   ruleRoutes,
-  hhqRoutes
+  hhqRoutes,
+  dialerRoutes
 } from "./routes/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -25,6 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/portal", portalRoutes);
   app.use("/api/rules", ruleRoutes);
   app.use("/api/hhq", hhqRoutes);
+  app.use("/api", dialerRoutes);
 
   // Activity logs endpoint (dashboard-related)
   app.get("/api/activity-logs", async (req, res) => {

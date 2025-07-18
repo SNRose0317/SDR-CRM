@@ -7,6 +7,8 @@ import {
   activityLogs,
   healthQuestionnaires,
   persons,
+  callSessions,
+  dialerQueues,
   type User,
   type InsertUser,
   type Lead,
@@ -109,6 +111,16 @@ export interface IStorage {
   getPersonAppointments(personId: string): Promise<Appointment[]>;
   getPersonTasks(personId: string): Promise<Task[]>;
   getPersonHealthQuestionnaire(personId: string): Promise<HealthQuestionnaire | undefined>;
+
+  // Call session operations (for phone dialer)
+  createCallSession(session: any): Promise<any>;
+  getCallSessions(leadId?: number, userId?: number): Promise<any[]>;
+  
+  // Dialer queue operations
+  createDialerQueue(queue: any): Promise<any>;
+  getDialerQueue(userId: number): Promise<any | undefined>;
+  updateDialerQueue(id: number, queue: any): Promise<any>;
+  deleteDialerQueue(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1196,6 +1208,57 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(healthQuestionnaires)
       .where(eq(healthQuestionnaires.personId, personId));
     return result[0] || undefined;
+  }
+
+  // Call session operations (for phone dialer)
+  async createCallSession(sessionData: any): Promise<any> {
+    const result = await db.insert(callSessions).values(sessionData).returning();
+    return result[0];
+  }
+
+  async getCallSessions(leadId?: number, userId?: number): Promise<any[]> {
+    const conditions = [];
+    
+    if (leadId) {
+      conditions.push(eq(callSessions.leadId, leadId));
+    }
+    if (userId) {
+      conditions.push(eq(callSessions.userId, userId));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(callSessions)
+        .where(and(...conditions))
+        .orderBy(desc(callSessions.startTime));
+    }
+    
+    return await db.select().from(callSessions).orderBy(desc(callSessions.startTime));
+  }
+  
+  // Dialer queue operations
+  async createDialerQueue(queueData: any): Promise<any> {
+    const result = await db.insert(dialerQueues).values(queueData).returning();
+    return result[0];
+  }
+
+  async getDialerQueue(userId: number): Promise<any | undefined> {
+    const result = await db.select().from(dialerQueues)
+      .where(and(eq(dialerQueues.userId, userId), eq(dialerQueues.status, 'active')))
+      .orderBy(desc(dialerQueues.createdAt));
+    return result[0] || undefined;
+  }
+
+  async updateDialerQueue(id: number, queueData: any): Promise<any> {
+    const result = await db
+      .update(dialerQueues)
+      .set({ ...queueData, updatedAt: new Date() })
+      .where(eq(dialerQueues.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDialerQueue(id: number): Promise<void> {
+    await db.delete(dialerQueues).where(eq(dialerQueues.id, id));
   }
 }
 

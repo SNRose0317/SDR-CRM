@@ -41,6 +41,8 @@ export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "com
 export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
 export const appointmentStatusEnum = pgEnum("appointment_status", ["scheduled", "confirmed", "completed", "cancelled", "no_show"]);
 export const leadReadinessEnum = pgEnum("lead_readiness", ["Cold", "Warm", "Hot", "Follow Up"]);
+export const callDispositionEnum = pgEnum("call_disposition", ["connected", "voicemail", "busy", "no_answer", "callback", "not_interested", "qualified", "follow_up"]);
+export const dialerStatusEnum = pgEnum("dialer_status", ["active", "paused", "completed"]);
 
 // Session storage table (required for auth)
 export const sessions = pgTable(
@@ -475,6 +477,53 @@ export const insertPortalSessionSchema = createInsertSchema(portalSessions).omit
   createdAt: true,
 });
 
+// Call Sessions table for tracking individual phone calls
+export const callSessions = pgTable("call_sessions", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(), // caller
+  startTime: timestamp("start_time").defaultNow(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // Duration in seconds
+  disposition: callDispositionEnum("disposition"),
+  notes: text("notes"),
+  outcome: text("outcome"), // qualified, not_interested, follow_up, etc.
+  nextAction: text("next_action"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const callSessionsRelations = relations(callSessions, ({ one }) => ({
+  lead: one(leads, {
+    fields: [callSessions.leadId],
+    references: [leads.id],
+  }),
+  user: one(users, {
+    fields: [callSessions.userId],
+    references: [users.id],
+  }),
+}));
+
+// Dialer Queue table for managing multi-lead calling sessions
+export const dialerQueues = pgTable("dialer_queues", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  name: varchar("name").notNull(),
+  leadIds: jsonb("lead_ids").notNull(), // array of lead IDs
+  currentIndex: integer("current_index").default(0),
+  autoDialerEnabled: boolean("auto_dialer_enabled").default(false),
+  autoDialerDelay: integer("auto_dialer_delay").default(10), // seconds between calls
+  status: dialerStatusEnum("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const dialerQueuesRelations = relations(dialerQueues, ({ one }) => ({
+  user: one(users, {
+    fields: [dialerQueues.userId],
+    references: [users.id],
+  }),
+}));
+
 // Permission Rules tables
 export const permissionRules = pgTable("permission_rules", {
   id: serial("id").primaryKey(),
@@ -573,6 +622,17 @@ export const insertPortalMessageSchema = createInsertSchema(portalMessages).omit
 export const insertPortalNotificationSchema = createInsertSchema(portalNotifications).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertCallSessionSchema = createInsertSchema(callSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDialerQueueSchema = createInsertSchema(dialerQueues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertHealthQuestionnaireSchema = createInsertSchema(healthQuestionnaires).omit({
