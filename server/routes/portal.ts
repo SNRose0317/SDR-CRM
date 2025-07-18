@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { PortalAuthService, portalAuth } from './portalAuth';
-import { db } from './db';
+import { PortalAuthService, portalAuth } from '../middleware/portalAuth';
+import { db } from '../db';
 import { 
   users,
   activityLogs,
@@ -9,7 +9,7 @@ import {
 import { eq, desc } from 'drizzle-orm';
 import { signupSchema } from '@shared/schema';
 import bcrypt from 'bcrypt';
-import { automationManager } from './automation/automationManager';
+import { automationManager } from '../automation/automationManager';
 
 const router = Router();
 const authService = new PortalAuthService();

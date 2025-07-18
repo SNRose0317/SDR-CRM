@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { db } from './db';
+import { db } from '../db';
 import { users, contacts, leads, portalSessions } from '@shared/schema';
 import { eq, and, gt, or } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
