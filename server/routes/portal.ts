@@ -4,9 +4,10 @@ import { db } from '../db';
 import { 
   users,
   activityLogs,
-  leads
+  leads,
+  contacts
 } from '@shared/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { signupSchema } from '@shared/schema';
 import bcrypt from 'bcrypt';
 import { automationManager } from '../automation/automationManager';
@@ -123,12 +124,25 @@ router.post('/auth/logout', portalAuth, async (req: any, res) => {
 // Get user profile
 router.get('/patient/profile', portalAuth, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const user = req.user;
+    const userId = user.entityId;
+    const userType = user.userType;
     
-    const [profile] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
+    let profile;
+    
+    if (userType === 'lead') {
+      const [leadProfile] = await db
+        .select()
+        .from(leads)
+        .where(eq(leads.id, userId));
+      profile = leadProfile;
+    } else if (userType === 'contact') {
+      const [contactProfile] = await db
+        .select()
+        .from(contacts)
+        .where(eq(contacts.id, userId));
+      profile = contactProfile;
+    }
     
     if (!profile) {
       return res.status(404).json({ error: 'Profile not found' });
@@ -139,7 +153,10 @@ router.get('/patient/profile', portalAuth, async (req: any, res) => {
       firstName: profile.firstName,
       lastName: profile.lastName,
       email: profile.email,
-      role: profile.role,
+      userType: userType,
+      status: profile.status,
+      phone: profile.phone,
+      state: profile.state,
       createdAt: profile.createdAt,
     });
   } catch (error) {
@@ -151,7 +168,9 @@ router.get('/patient/profile', portalAuth, async (req: any, res) => {
 // Get user activities
 router.get('/patient/activities', portalAuth, async (req: any, res) => {
   try {
-    const userId = req.user.id;
+    const user = req.user;
+    const userId = user.entityId;
+    const userType = user.userType;
     
     const activities = await db
       .select({
@@ -161,7 +180,12 @@ router.get('/patient/activities', portalAuth, async (req: any, res) => {
         createdAt: activityLogs.createdAt,
       })
       .from(activityLogs)
-      .where(eq(activityLogs.userId, userId))
+      .where(
+        and(
+          eq(activityLogs.entityType, userType),
+          eq(activityLogs.entityId, userId)
+        )
+      )
       .orderBy(desc(activityLogs.createdAt))
       .limit(50);
     
