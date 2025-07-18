@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useCallback } from "react";
 
 const usePortalApi = () => {
-  const getToken = () => localStorage.getItem('portalToken');
+  const token = useMemo(() => localStorage.getItem('portalToken'), []);
   
-  const portalRequest = async (endpoint: string, options: RequestInit = {}) => {
-    const token = getToken();
+  const portalRequest = useCallback(async (endpoint: string, options: RequestInit = {}) => {
     if (!token) {
       throw new Error('No authentication token');
     }
@@ -23,58 +23,58 @@ const usePortalApi = () => {
     }
 
     return response.json();
-  };
+  }, [token]);
 
-  return { portalRequest };
+  return { portalRequest, hasToken: !!token };
 };
 
 export const usePatientProfile = () => {
-  const { portalRequest } = usePortalApi();
+  const { portalRequest, hasToken } = usePortalApi();
   
   return useQuery({
     queryKey: ['portal', 'patient', 'profile'],
     queryFn: () => portalRequest('/patient/profile'),
-    enabled: !!localStorage.getItem('portalToken'),
+    enabled: hasToken,
   });
 };
 
 export const usePatientAppointments = () => {
-  const { portalRequest } = usePortalApi();
+  const { portalRequest, hasToken } = usePortalApi();
   
   return useQuery({
     queryKey: ['portal', 'patient', 'appointments'],
     queryFn: () => portalRequest('/patient/appointments'),
-    enabled: !!localStorage.getItem('portalToken'),
+    enabled: hasToken,
   });
 };
 
 export const usePatientMessages = () => {
-  const { portalRequest } = usePortalApi();
+  const { portalRequest, hasToken } = usePortalApi();
   
   return useQuery({
     queryKey: ['portal', 'patient', 'messages'],
     queryFn: () => portalRequest('/patient/messages'),
-    enabled: !!localStorage.getItem('portalToken'),
+    enabled: hasToken,
   });
 };
 
 export const usePatientNotifications = () => {
-  const { portalRequest } = usePortalApi();
+  const { portalRequest, hasToken } = usePortalApi();
   
   return useQuery({
     queryKey: ['portal', 'patient', 'notifications'],
     queryFn: () => portalRequest('/patient/notifications'),
-    enabled: !!localStorage.getItem('portalToken'),
+    enabled: hasToken,
   });
 };
 
 export const usePatientActivities = () => {
-  const { portalRequest } = usePortalApi();
+  const { portalRequest, hasToken } = usePortalApi();
   
   return useQuery({
     queryKey: ['portal', 'patient', 'activities'],
     queryFn: () => portalRequest('/patient/activities'),
-    enabled: !!localStorage.getItem('portalToken'),
+    enabled: hasToken,
   });
 };
 

@@ -78,7 +78,37 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// Login endpoint
+// Login endpoints (both /login and /auth/login for compatibility)
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  
+  try {
+    const result = await authService.loginExternalUser(email, password);
+    
+    if (!result) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Log portal activity
+    await db.insert(activityLogs).values({
+      entityType: result.user.userType === 'lead' ? 'lead' : 'contact',
+      entityId: result.user.id,
+      userId: null, // No system user for external users
+      action: 'portal_login',
+      details: `${result.user.userType} logged into portal`,
+    });
+
+    res.json({
+      user: result.user,
+      sessionToken: result.sessionToken,
+    });
+  } catch (error) {
+    console.error('Portal login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Login endpoint (legacy path for compatibility)
 router.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
   

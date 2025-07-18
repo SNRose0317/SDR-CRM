@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
@@ -13,11 +13,13 @@ export default function PortalHHQPage() {
   const [, setLocation] = useLocation();
   const { data: profile } = usePatientProfile();
   
+  // Memoize token to prevent infinite re-renders
+  const token = useMemo(() => localStorage.getItem('portalToken'), []);
+  
   // Check HHQ status
   const { data: hhqStatus, isLoading, refetch } = useQuery({
     queryKey: ['portal', 'hhq', 'status'],
     queryFn: async () => {
-      const token = localStorage.getItem('portalToken');
       if (!token) throw new Error('No token');
       
       const response = await fetch('/api/portal/hhq/status', {
@@ -29,7 +31,7 @@ export default function PortalHHQPage() {
       if (!response.ok) throw new Error('Failed to fetch HHQ status');
       return response.json();
     },
-    enabled: !!profile?.id && !!localStorage.getItem('portalToken'),
+    enabled: !!profile?.id && !!token,
   });
 
   const handleHHQComplete = () => {

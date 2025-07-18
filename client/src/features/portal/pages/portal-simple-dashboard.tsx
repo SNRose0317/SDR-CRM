@@ -7,15 +7,18 @@ import { LoadingSpinner } from "@/shared/components/ui/loading-spinner";
 import { ErrorMessage } from "@/shared/components/ui/error-message";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 export default function PortalSimpleDashboard() {
   const { data: profile, isLoading, error } = usePatientProfile();
+
+  // Memoize token to prevent infinite re-renders
+  const token = useMemo(() => localStorage.getItem('portalToken'), []);
 
   // Check if user has HHQ and its status
   const { data: hhqStatus } = useQuery({
     queryKey: ['portal', 'hhq', 'status'],
     queryFn: async () => {
-      const token = localStorage.getItem('portalToken');
       if (!token) throw new Error('No token');
       
       const response = await fetch('/api/portal/hhq/status', {
@@ -27,7 +30,7 @@ export default function PortalSimpleDashboard() {
       if (!response.ok) throw new Error('Failed to fetch HHQ status');
       return response.json();
     },
-    enabled: !!profile?.id && !!localStorage.getItem('portalToken'),
+    enabled: !!profile?.id && !!token,
   });
 
   if (isLoading) return <LoadingSpinner />;
