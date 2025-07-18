@@ -8,6 +8,8 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Switch } from '@/shared/components/ui/switch';
 import { Badge } from '@/shared/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { User } from '@shared/schema';
 
 interface NodePropertiesProps {
   selectedNode: WorkflowNode | null;
@@ -125,28 +127,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
 
     switch (type) {
       case NodeType.TRIGGER_PORTAL_SIGNUP:
-        return (
-          <div className="space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white">Trigger Configuration</h4>
-            <div className="space-y-3">
-              <div>
-                <Label>Event Type</Label>
-                <Select
-                  value={data.config.triggerEvent || 'portal.signup'}
-                  onValueChange={(value) => handleNodePropertyChange('data.config.triggerEvent', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select event type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="portal.signup">Portal Signup</SelectItem>
-                    <SelectItem value="user.created">User Created</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        );
+        return <UserConfiguration data={data} onUpdate={handleNodePropertyChange} />;
 
       case NodeType.ACTION_UPDATE_STATUS:
         return (
@@ -460,6 +441,162 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         
         {selectedNode && renderNodeProperties()}
         {selectedEdge && renderEdgeProperties()}
+      </div>
+    </div>
+  );
+};
+
+// User Configuration Component for WHO selection
+interface UserConfigurationProps {
+  data: any;
+  onUpdate: (path: string, value: any) => void;
+}
+
+const UserConfiguration: React.FC<UserConfigurationProps> = ({ data, onUpdate }) => {
+  const [selectedUserType, setSelectedUserType] = useState<string>(
+    data.config?.userType || 'portal_user'
+  );
+  const [selectedUsers, setSelectedUsers] = useState<string[]>(
+    data.config?.specificUsers || []
+  );
+
+  // User type options mapping to system entities
+  const userTypeOptions = [
+    { value: 'portal_user', label: 'Portal User', description: 'Patients who sign up through patient portal' },
+    { value: 'lead', label: 'Lead', description: 'Potential customers in sales pipeline' },
+    { value: 'contact', label: 'Contact', description: 'Active customers receiving healthcare services' },
+    { value: 'sdr', label: 'SDR', description: 'Sales Development Representatives' },
+    { value: 'health_coach', label: 'Health Coach', description: 'Healthcare professionals managing patients' },
+    { value: 'admin', label: 'Admin', description: 'System administrators with full access' },
+  ];
+
+  // Fetch users based on selected type
+  const { data: availableUsers, isLoading } = useQuery({
+    queryKey: [`/api/users`, selectedUserType],
+    queryFn: async () => {
+      if (selectedUserType === 'portal_user') {
+        // Portal users are patients
+        const response = await fetch('/api/users?role=patient');
+        return response.json();
+      } else if (selectedUserType === 'lead') {
+        // Leads from leads table
+        const response = await fetch('/api/leads');
+        return response.json();
+      } else if (selectedUserType === 'contact') {
+        // Contacts from contacts table
+        const response = await fetch('/api/contacts');
+        return response.json();
+      } else {
+        // System users (SDR, Health Coach, Admin)
+        const response = await fetch(`/api/users?role=${selectedUserType}`);
+        return response.json();
+      }
+    },
+    enabled: !!selectedUserType,
+  });
+
+  const handleUserTypeChange = (value: string) => {
+    setSelectedUserType(value);
+    setSelectedUsers([]); // Reset user selection when type changes
+    onUpdate('data.config.userType', value);
+    onUpdate('data.config.specificUsers', []);
+  };
+
+  const handleUserSelection = (userId: string) => {
+    const updatedUsers = selectedUsers.includes(userId)
+      ? selectedUsers.filter(id => id !== userId)
+      : [...selectedUsers, userId];
+    
+    setSelectedUsers(updatedUsers);
+    onUpdate('data.config.specificUsers', updatedUsers);
+  };
+
+  const getUserDisplayName = (user: any) => {
+    if (selectedUserType === 'lead' || selectedUserType === 'contact') {
+      return `${user.firstName} ${user.lastName} (${user.email})`;
+    }
+    return `${user.firstName} ${user.lastName} (${user.role})`;
+  };
+
+  return (
+    <div className="space-y-4">
+      <h4 className="font-medium text-gray-900 dark:text-white">User Configuration</h4>
+      
+      {/* User Type Selection */}
+      <div className="space-y-3">
+        <div>
+          <Label>User Type</Label>
+          <Select value={selectedUserType} onValueChange={handleUserTypeChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select user type" />
+            </SelectTrigger>
+            <SelectContent>
+              {userTypeOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{option.label}</span>
+                    <span className="text-sm text-gray-500">{option.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Individual User Selection */}
+        {selectedUserType && (
+          <div>
+            <Label>Select Individual Users (Optional)</Label>
+            <div className="mt-2 space-y-2">
+              {isLoading ? (
+                <div className="text-sm text-gray-500">Loading users...</div>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {availableUsers?.map((user: any) => (
+                    <div key={user.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`user-${user.id}`}
+                        checked={selectedUsers.includes(user.id.toString())}
+                        onChange={() => handleUserSelection(user.id.toString())}
+                        className="rounded border-gray-300"
+                      />
+                      <label
+                        htmlFor={`user-${user.id}`}
+                        className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        {getUserDisplayName(user)}
+                      </label>
+                    </div>
+                  ))}
+                  {availableUsers?.length === 0 && (
+                    <div className="text-sm text-gray-500">No users found for this type</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="mt-2 text-xs text-gray-500">
+              Leave empty to apply to all users of this type
+            </div>
+          </div>
+        )}
+
+        {/* Selected Users Display */}
+        {selectedUsers.length > 0 && (
+          <div>
+            <Label>Selected Users</Label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {selectedUsers.map(userId => {
+                const user = availableUsers?.find((u: any) => u.id.toString() === userId);
+                return user ? (
+                  <Badge key={userId} variant="secondary">
+                    {getUserDisplayName(user)}
+                  </Badge>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
