@@ -345,7 +345,7 @@ export const WorkflowBuilder: React.FC<WorkflowBuilderProps> = (props) => {
 // Helper functions with business-friendly labels
 function getNodeLabel(type: NodeType): string {
   const labels: Record<NodeType, string> = {
-    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'Portal User Signs Up',
+    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'User (Configure in Properties)',
     [NodeType.TRIGGER_LEAD_CREATED]: 'New Lead Added',
     [NodeType.TRIGGER_STATUS_CHANGED]: 'Lead Status Changes',
     [NodeType.ACTION_CREATE_LEAD]: 'Add New Lead',
@@ -370,7 +370,7 @@ function getNodeLabel(type: NodeType): string {
 
 function getNodeDescription(type: NodeType): string {
   const descriptions: Record<NodeType, string> = {
-    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'When a new user registers through the patient portal',
+    [NodeType.TRIGGER_PORTAL_SIGNUP]: 'Select user type and configure user selection in Properties panel',
     [NodeType.TRIGGER_LEAD_CREATED]: 'When a new lead is added to the system',
     [NodeType.TRIGGER_STATUS_CHANGED]: 'When a lead moves to a different stage in the process',
     [NodeType.ACTION_CREATE_LEAD]: 'Create a new lead record in the system',
@@ -446,7 +446,9 @@ function getNodeColor(type: NodeType): string {
 function getDefaultNodeConfig(type: NodeType): any {
   const configs: Record<NodeType, any> = {
     [NodeType.TRIGGER_PORTAL_SIGNUP]: {
-      triggerEvent: 'portal.signup',
+      userCategory: 'internal',
+      userType: 'sdr',
+      specificUsers: [],
       enabled: true,
     },
     [NodeType.ACTION_UPDATE_STATUS]: {

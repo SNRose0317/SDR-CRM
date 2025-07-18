@@ -17,10 +17,10 @@ const nodeCategories: NodeCategory[] = [
       {
         type: NodeType.TRIGGER_PORTAL_SIGNUP,
         name: 'User',
-        description: 'Select user type (Portal User, Lead, Contact) and specific users in configuration',
+        description: 'Select user type (Internal or External) and specific users in configuration',
         icon: '👤',
         color: '#10b981',
-        defaultConfig: { userType: 'portal_user', specificUsers: [] },
+        defaultConfig: { userCategory: 'internal', userType: 'sdr', specificUsers: [] },
         inputs: [],
         outputs: [{ id: 'output', name: 'Output', type: 'data' as const, required: true }],
       },
