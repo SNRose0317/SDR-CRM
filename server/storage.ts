@@ -6,6 +6,7 @@ import {
   appointments,
   activityLogs,
   healthQuestionnaires,
+  persons,
   type User,
   type InsertUser,
   type Lead,
@@ -19,7 +20,10 @@ import {
   type ActivityLog,
   type InsertActivityLog,
   type HealthQuestionnaire,
-  type InsertHealthQuestionnaire
+  type InsertHealthQuestionnaire,
+  type Person,
+  type InsertPerson,
+  generatePersonId
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, isNull } from "drizzle-orm";
@@ -87,6 +91,21 @@ export interface IStorage {
   signHealthQuestionnaire(questionnaireId: number, signatureData?: string): Promise<HealthQuestionnaire>;
   markAsPaid(questionnaireId: number, amount: number): Promise<HealthQuestionnaire>;
   bookAppointment(questionnaireId: number, appointmentId: number): Promise<HealthQuestionnaire>;
+
+  // Person operations (unified lead/contact system)
+  getPersons(filters?: any): Promise<Person[]>;
+  getPerson(personId: string): Promise<Person | undefined>;
+  getPersonById(id: number): Promise<Person | undefined>;
+  createPerson(person: InsertPerson): Promise<Person>;
+  updatePerson(personId: string, person: Partial<InsertPerson>): Promise<Person>;
+  deletePerson(personId: string): Promise<void>;
+  convertPersonToContact(personId: string, healthCoachId: number): Promise<Person>;
+  getPersonByEmail(email: string): Promise<Person | undefined>;
+  getLeadPersons(filters?: any): Promise<Person[]>;
+  getContactPersons(filters?: any): Promise<Person[]>;
+  getPersonAppointments(personId: string): Promise<Appointment[]>;
+  getPersonTasks(personId: string): Promise<Task[]>;
+  getPersonHealthQuestionnaire(personId: string): Promise<HealthQuestionnaire | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -905,6 +924,144 @@ export class DatabaseStorage implements IStorage {
       .where(eq(leads.id, leadId));
 
     return contact;
+  }
+
+  // Person operations (unified lead/contact system)
+  async getPersons(filters?: any): Promise<Person[]> {
+    const conditions = [];
+    
+    if (filters?.lifecycleStage) {
+      conditions.push(eq(persons.lifecycleStage, filters.lifecycleStage));
+    }
+    if (filters?.leadStatus) {
+      conditions.push(eq(persons.leadStatus, filters.leadStatus));
+    }
+    if (filters?.contactStage) {
+      conditions.push(eq(persons.contactStage, filters.contactStage));
+    }
+    if (filters?.ownerId) {
+      conditions.push(eq(persons.ownerId, filters.ownerId));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          like(persons.firstName, `%${filters.search}%`),
+          like(persons.lastName, `%${filters.search}%`),
+          like(persons.email, `%${filters.search}%`)
+        )
+      );
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(persons).where(and(...conditions)).orderBy(desc(persons.createdAt));
+    }
+    
+    return await db.select().from(persons).orderBy(desc(persons.createdAt));
+  }
+
+  async getPerson(personId: string): Promise<Person | undefined> {
+    const result = await db.select().from(persons).where(eq(persons.personId, personId));
+    return result[0] || undefined;
+  }
+
+  async getPersonById(id: number): Promise<Person | undefined> {
+    const result = await db.select().from(persons).where(eq(persons.id, id));
+    return result[0] || undefined;
+  }
+
+  async createPerson(personData: InsertPerson): Promise<Person> {
+    // Generate MH-1234 format person ID
+    const tempResult = await db.insert(persons).values({
+      ...personData,
+      personId: 'TEMP' // Temporary value, will be updated
+    }).returning();
+    
+    const person = tempResult[0];
+    const mhId = generatePersonId(person.id);
+    
+    // Update with proper MH-1234 format
+    const [updatedPerson] = await db
+      .update(persons)
+      .set({ personId: mhId })
+      .where(eq(persons.id, person.id))
+      .returning();
+    
+    return updatedPerson;
+  }
+
+  async updatePerson(personId: string, personData: Partial<InsertPerson>): Promise<Person> {
+    const result = await db
+      .update(persons)
+      .set({ ...personData, updatedAt: new Date() })
+      .where(eq(persons.personId, personId))
+      .returning();
+    return result[0];
+  }
+
+  async deletePerson(personId: string): Promise<void> {
+    await db.delete(persons).where(eq(persons.personId, personId));
+  }
+
+  async convertPersonToContact(personId: string, healthCoachId: number): Promise<Person> {
+    const person = await this.getPerson(personId);
+    if (!person) {
+      throw new Error('Person not found');
+    }
+
+    if (person.lifecycleStage === 'contact') {
+      throw new Error('Person is already a contact');
+    }
+
+    // Convert to contact
+    const updatedPerson = await this.updatePerson(personId, {
+      lifecycleStage: 'contact',
+      contactStage: 'Intake',
+      healthCoachId: healthCoachId,
+      ownerId: healthCoachId,
+      convertedAt: new Date()
+    });
+
+    // Log the conversion activity
+    await this.createActivityLog({
+      entityType: 'person',
+      entityId: person.id,
+      action: 'converted_to_contact',
+      details: `Person ${personId} converted from lead to contact`,
+      userId: healthCoachId
+    });
+
+    return updatedPerson;
+  }
+
+  async getPersonByEmail(email: string): Promise<Person | undefined> {
+    const result = await db.select().from(persons).where(eq(persons.email, email));
+    return result[0] || undefined;
+  }
+
+  async getLeadPersons(filters?: any): Promise<Person[]> {
+    return await this.getPersons({ ...filters, lifecycleStage: 'lead' });
+  }
+
+  async getContactPersons(filters?: any): Promise<Person[]> {
+    return await this.getPersons({ ...filters, lifecycleStage: 'contact' });
+  }
+
+  async getPersonAppointments(personId: string): Promise<Appointment[]> {
+    return await db.select().from(appointments)
+      .where(eq(appointments.personId, personId))
+      .orderBy(desc(appointments.scheduledAt));
+  }
+
+  async getPersonTasks(personId: string): Promise<Task[]> {
+    return await db.select().from(tasks)
+      .where(eq(tasks.personId, personId))
+      .orderBy(desc(tasks.createdAt));
+  }
+
+  async getPersonHealthQuestionnaire(personId: string): Promise<HealthQuestionnaire | undefined> {
+    const result = await db.select().from(healthQuestionnaires)
+      .where(eq(healthQuestionnaires.personId, personId));
+    return result[0] || undefined;
   }
 }
 

@@ -1,0 +1,41 @@
+ If you must keep two tables
+Shared primary key
+Create person_id on both Lead and Contact; when a lead converts you upsert into Contact using the same ID instead of generating a new one.
+
+Polymorphic look‑ups
+Point form_submission.person_id and appointment.person_id to person_id (not to lead_id); conversion then only flips a flag.
+
+Field‑mapping table
+Maintain a JSON or DB table describing “Lead field → Contact field” so your conversion job is declarative and update‑safe.
+
+Re‑parent child records
+If historical records are already keyed to lead_id, run a single SQL update in the conversion transaction:
+
+sql
+Copy
+Edit
+UPDATE form_submission
+SET person_id = :new_contact_id
+WHERE lead_id = :old_lead_id;
+5. Migration plan from dual → unified
+Add person table and back‑fill one row per existing lead/contact (deduping by email).
+
+Add person_id FK to all activity / form / appointment tables and populate from legacy IDs.
+
+Create views lead_view and contact_view that filter by lifecycle_stage for existing code.
+
+Turn off Lead creation once new SDR forms start writing directly to person.
+
+Decommission the old Lead table after a read‑only grace period.
+
+6. Key design tips
+Immutable identity, mutable status. Keep one row that lives forever; drive the pipeline with status fields rather than separate rows.
+
+Event sourcing for activities. All interactions should be standalone rows linked by person_id; you’ll never have to “carry them over.”
+
+Audit trail. Even in a unified model, store a conversion timestamp and original lead source for reporting.
+
+Avoid hard deletes. Use a disqualified_reason and hide via UI; analytics teams will thank you later.
+
+Bottom line
+Modern CRMs either (a) keep Lead and Contact as distinct objects but handle conversion with robust re‑parenting logic (Salesforce, Dynamics), or (b) treat them as one Person whose lifecycle stage just advances (HubSpot, Intercom). For a fresh build that must seamlessly move forms and appointments into the customer record, a single Person table with a lifecycle_stage field is usually the simplest, cleanest, and most future‑proof solution.

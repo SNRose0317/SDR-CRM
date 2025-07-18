@@ -17,6 +17,7 @@ import { relations } from "drizzle-orm";
 
 // Enums
 export const userRoleEnum = pgEnum("user_role", ["sdr", "health_coach", "admin", "patient"]);
+export const lifecycleStageEnum = pgEnum("lifecycle_stage", ["lead", "contact"]);
 export const leadStatusEnum = pgEnum("lead_status", ["New", "HHQ Started", "HHQ Signed", "Booking: Not Paid", "Booking: Paid/Not Booked", "Booking: Paid/Booked", "Converted"]);
 export const hhqStatusEnum = pgEnum("hhq_status", ["Created", "Submitted", "Signed", "Paid", "Appointment Booked", "Completed"]);
 export const contactStageEnum = pgEnum("contact_stage", [
@@ -71,6 +72,59 @@ export const usersRelations = relations(users, ({ many }) => ({
   assignedContacts: many(contacts),
   activityLogs: many(activityLogs),
   portalSessions: many(portalSessions),
+  assignedPersons: many(persons),
+}));
+
+// Unified person table with persistent MH-1234 format
+export const persons = pgTable("persons", {
+  id: serial("id").primaryKey(),
+  personId: varchar("person_id").unique().notNull(), // MH-1234 format
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull(),
+  phone: varchar("phone"),
+  state: varchar("state"),
+  lifecycleStage: lifecycleStageEnum("lifecycle_stage").notNull().default("lead"),
+  
+  // Lead-specific fields
+  leadStatus: leadStatusEnum("lead_status").default("New"),
+  source: varchar("source"),
+  leadScore: integer("lead_score").default(0),
+  
+  // Contact-specific fields
+  contactStage: contactStageEnum("contact_stage").default("Intake"),
+  healthCoachId: integer("health_coach_id").references(() => users.id),
+  
+  // Common fields
+  ownerId: integer("owner_id").references(() => users.id),
+  notes: text("notes"),
+  passwordHash: varchar("password_hash"),
+  portalAccess: boolean("portal_access").default(false),
+  lastPortalLogin: timestamp("last_portal_login"),
+  
+  // Audit fields
+  originalLeadId: integer("original_lead_id"), // For migration reference
+  convertedAt: timestamp("converted_at"),
+  disqualifiedReason: varchar("disqualified_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const personsRelations = relations(persons, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [persons.ownerId],
+    references: [users.id],
+  }),
+  healthCoach: one(users, {
+    fields: [persons.healthCoachId],
+    references: [users.id],
+  }),
+  tasks: many(tasks),
+  appointments: many(appointments),
+  activityLogs: many(activityLogs),
+  portalSessions: many(portalSessions),
+  healthQuestionnaires: many(healthQuestionnaires),
 }));
 
 // Leads table
@@ -155,6 +209,8 @@ export const tasks = pgTable("tasks", {
   status: taskStatusEnum("status").notNull().default("todo"),
   assignedTo: integer("assigned_to").references(() => users.id),
   dueDate: timestamp("due_date"),
+  personId: varchar("person_id").references(() => persons.personId),
+  // Legacy fields for migration
   leadId: integer("lead_id").references(() => leads.id),
   contactId: integer("contact_id").references(() => contacts.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -165,6 +221,10 @@ export const tasksRelations = relations(tasks, ({ one }) => ({
   assignedUser: one(users, {
     fields: [tasks.assignedTo],
     references: [users.id],
+  }),
+  person: one(persons, {
+    fields: [tasks.personId],
+    references: [persons.personId],
   }),
   lead: one(leads, {
     fields: [tasks.leadId],
@@ -185,6 +245,8 @@ export const appointments = pgTable("appointments", {
   duration: integer("duration"), // Duration in minutes
   status: appointmentStatusEnum("status").notNull().default("scheduled"),
   userId: integer("user_id").references(() => users.id),
+  personId: varchar("person_id").references(() => persons.personId),
+  // Legacy fields for migration
   leadId: integer("lead_id").references(() => leads.id),
   contactId: integer("contact_id").references(() => contacts.id),
   meetingLink: varchar("meeting_link"),
@@ -196,6 +258,10 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   user: one(users, {
     fields: [appointments.userId],
     references: [users.id],
+  }),
+  person: one(persons, {
+    fields: [appointments.personId],
+    references: [persons.personId],
   }),
   lead: one(leads, {
     fields: [appointments.leadId],
@@ -210,7 +276,9 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
 // Health History Questionnaire table
 export const healthQuestionnaires = pgTable("health_questionnaires", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  personId: varchar("person_id").references(() => persons.personId),
+  // Legacy field for migration
+  leadId: integer("lead_id").references(() => leads.id),
   status: hhqStatusEnum("status").notNull().default("Created"),
   energyLevel: integer("energy_level").notNull(), // 1-10 scale
   libidoLevel: integer("libido_level").notNull(), // 1-10 scale
@@ -228,6 +296,10 @@ export const healthQuestionnaires = pgTable("health_questionnaires", {
 });
 
 export const healthQuestionnairesRelations = relations(healthQuestionnaires, ({ one }) => ({
+  person: one(persons, {
+    fields: [healthQuestionnaires.personId],
+    references: [persons.personId],
+  }),
   lead: one(leads, {
     fields: [healthQuestionnaires.leadId],
     references: [leads.id],
@@ -267,6 +339,8 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
 // Portal sessions table for external user (leads/contacts) authentication
 export const portalSessions = pgTable("portal_sessions", {
   id: serial("id").primaryKey(),
+  personId: varchar("person_id").references(() => persons.personId),
+  // Legacy fields for migration
   userId: integer("user_id").references(() => users.id),
   contactId: integer("contact_id").references(() => contacts.id),
   leadId: integer("lead_id").references(() => leads.id),
@@ -276,6 +350,10 @@ export const portalSessions = pgTable("portal_sessions", {
 });
 
 export const portalSessionsRelations = relations(portalSessions, ({ one }) => ({
+  person: one(persons, {
+    fields: [portalSessions.personId],
+    references: [persons.personId],
+  }),
   user: one(users, {
     fields: [portalSessions.userId],
     references: [users.id],
@@ -525,6 +603,29 @@ export type InsertPermissionRule = typeof permissionRules.$inferInsert;
 export type RuleEvaluation = typeof ruleEvaluations.$inferSelect;
 export type RuleAuditLog = typeof ruleAuditLog.$inferSelect;
 export type HealthQuestionnaire = typeof healthQuestionnaires.$inferSelect;
+
+// Add person insert schema
+export const insertPersonSchema = createInsertSchema(persons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Person types
+export type Person = typeof persons.$inferSelect;
+export type InsertPerson = z.infer<typeof insertPersonSchema>;
+
+// Utility function to generate MH-1234 format person ID
+export function generatePersonId(numericId: number): string {
+  return `MH-${numericId.toString().padStart(4, '0')}`;
+}
+
+// Function to extract numeric ID from MH-1234 format
+export function extractPersonIdNumber(personId: string): number {
+  const match = personId.match(/^MH-(\d+)$/);
+  if (!match) throw new Error(`Invalid person ID format: ${personId}`);
+  return parseInt(match[1], 10);
+}
 export type InsertHealthQuestionnaire = z.infer<typeof insertHealthQuestionnaireSchema>;
 
 // Signup schema for portal registration
