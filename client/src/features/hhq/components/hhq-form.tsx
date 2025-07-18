@@ -316,7 +316,7 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
       {currentStep === 4 && hhqData && !hhqData.appointmentBooked && (
         <AppointmentBooking 
           hhqId={hhqData.id} 
-          leadId={lead.id}
+          leadId={actualLeadId}
           onComplete={() => {
             toast({
               title: "Complete!",
