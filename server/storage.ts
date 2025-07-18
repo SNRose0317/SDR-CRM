@@ -41,6 +41,8 @@ export interface IStorage {
   // Lead operations
   getLeads(filters?: any): Promise<Lead[]>;
   getLeadsForUser(userId: number, userRole: UserRole): Promise<Lead[]>;
+  getMyLeads(userId: number, userRole: UserRole): Promise<Lead[]>;
+  getOpenLeads(userId: number, userRole: UserRole): Promise<Lead[]>;
   getLead(id: number): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: number, lead: Partial<InsertLead>): Promise<Lead>;
@@ -545,6 +547,52 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Fallback to default permissions
+      if (canUserSeeEntity(userRole, 'lead', lead.ownerId, userId, lead.createdAt!, DEFAULT_PERMISSIONS)) {
+        filteredLeads.push(lead);
+      }
+    }
+    
+    return filteredLeads;
+  }
+
+  // Get "My Leads" - leads assigned to the current user
+  async getMyLeads(userId: number, userRole: UserRole): Promise<Lead[]> {
+    const allLeads = await db.select().from(leads).where(eq(leads.ownerId, userId)).orderBy(desc(leads.createdAt));
+    
+    // Filter leads based on rule engine permissions
+    const filteredLeads = [];
+    for (const lead of allLeads) {
+      // Check rule-based permissions first
+      const rulePermissions = await ruleEngine.evaluateUserAccess('lead', lead.id, userId);
+      if (rulePermissions.canRead) {
+        filteredLeads.push(lead);
+        continue;
+      }
+      
+      // Fallback to default permissions
+      if (canUserSeeEntity(userRole, 'lead', lead.ownerId, userId, lead.createdAt!, DEFAULT_PERMISSIONS)) {
+        filteredLeads.push(lead);
+      }
+    }
+    
+    return filteredLeads;
+  }
+
+  // Get "Open Leads" - unassigned leads with health coach 24-hour filtering
+  async getOpenLeads(userId: number, userRole: UserRole): Promise<Lead[]> {
+    const allUnassignedLeads = await db.select().from(leads).where(isNull(leads.ownerId)).orderBy(desc(leads.createdAt));
+    
+    // Filter leads based on rule engine permissions and health coach 24-hour rule
+    const filteredLeads = [];
+    for (const lead of allUnassignedLeads) {
+      // Check rule-based permissions first
+      const rulePermissions = await ruleEngine.evaluateUserAccess('lead', lead.id, userId);
+      if (rulePermissions.canRead) {
+        filteredLeads.push(lead);
+        continue;
+      }
+      
+      // Fallback to default permissions - this is where the health coach 24-hour rule is applied
       if (canUserSeeEntity(userRole, 'lead', lead.ownerId, userId, lead.createdAt!, DEFAULT_PERMISSIONS)) {
         filteredLeads.push(lead);
       }

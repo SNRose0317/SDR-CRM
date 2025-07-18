@@ -115,4 +115,40 @@ router.get("/user/:userId", async (req, res) => {
   }
 });
 
+// Get "My Leads" - leads assigned to the current user
+router.get("/my-leads/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { userRole } = req.query;
+
+    if (!userId || !userRole) {
+      return res.status(400).json({ message: 'User ID and user role are required' });
+    }
+
+    const leads = await storage.getMyLeads(parseInt(userId), userRole as any);
+    return res.json(leads);
+  } catch (error) {
+    console.error('Error getting my leads:', error);
+    return res.status(500).json({ message: 'Failed to get my leads' });
+  }
+});
+
+// Get "Open Leads" - unassigned leads with permission filtering
+router.get("/open-leads/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { userRole } = req.query;
+
+    if (!userId || !userRole) {
+      return res.status(400).json({ message: 'User ID and user role are required' });
+    }
+
+    const leads = await storage.getOpenLeads(parseInt(userId), userRole as any);
+    return res.json(leads);
+  } catch (error) {
+    console.error('Error getting open leads:', error);
+    return res.status(500).json({ message: 'Failed to get open leads' });
+  }
+});
+
 export default router;

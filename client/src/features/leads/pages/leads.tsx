@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import DataTable from "@/shared/components/data-display/data-table";
 import LeadForm from "@/features/leads/components/lead-form";
 import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText } from "lucide-react";
@@ -30,24 +31,9 @@ export default function Leads() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isHHQOpen, setIsHHQOpen] = useState(false);
   const [hhqLead, setHhqLead] = useState<Lead | null>(null);
+  const [activeTab, setActiveTab] = useState<"my-leads" | "open-leads">("my-leads");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const { data: leads, isLoading } = useQuery<Lead[]>({
-    queryKey: ["/api/leads", filters],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value.toString());
-      });
-      const response = await fetch(`/api/leads?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch leads');
-      }
-      const data = await response.json();
-      return Array.isArray(data) ? data : [];
-    },
-  });
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
@@ -64,12 +50,46 @@ export default function Leads() {
   // Mock current user for demo - in real app this would come from auth
   const currentUser = users?.[0]; // This would be the logged-in user
 
+  // Get My Leads (assigned to current user)
+  const { data: myLeads, isLoading: isMyLeadsLoading } = useQuery<Lead[]>({
+    queryKey: ["/api/leads/my-leads", currentUser?.id],
+    enabled: !!currentUser?.id,
+    queryFn: async () => {
+      const response = await fetch(`/api/leads/my-leads/${currentUser!.id}?userRole=${currentUser!.role}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch my leads');
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  // Get Open Leads (unassigned leads with health coach 24-hour filtering)
+  const { data: openLeads, isLoading: isOpenLeadsLoading } = useQuery<Lead[]>({
+    queryKey: ["/api/leads/open-leads", currentUser?.id],
+    enabled: !!currentUser?.id,
+    queryFn: async () => {
+      const response = await fetch(`/api/leads/open-leads/${currentUser!.id}?userRole=${currentUser!.role}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch open leads');
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+
+  // Get the current leads based on active tab
+  const leads = activeTab === "my-leads" ? myLeads : openLeads;
+  const isLoading = activeTab === "my-leads" ? isMyLeadsLoading : isOpenLeadsLoading;
+
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest("DELETE", `/api/leads/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      // Invalidate both tab queries
+      queryClient.invalidateQueries({ queryKey: ["/api/leads/my-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
       toast({
         title: "Success",
         description: "Lead deleted successfully",
@@ -98,6 +118,9 @@ export default function Leads() {
   const handleFormClose = () => {
     setSelectedLead(null);
     setIsFormOpen(false);
+    // Invalidate both tab queries
+    queryClient.invalidateQueries({ queryKey: ["/api/leads/my-leads"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
   };
 
   const handleStartHHQ = (lead: Lead) => {
@@ -108,7 +131,9 @@ export default function Leads() {
   const handleHHQClose = () => {
     setHhqLead(null);
     setIsHHQOpen(false);
-    queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+    // Invalidate both tab queries
+    queryClient.invalidateQueries({ queryKey: ["/api/leads/my-leads"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
   };
 
   const columns = [
@@ -277,13 +302,50 @@ export default function Leads() {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={leads || []}
-        loading={isLoading}
-        onFilter={setFilters}
-        filters={filterComponents}
-      />
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(value) => setActiveTab(value as "my-leads" | "open-leads")}
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="my-leads">My Leads</TabsTrigger>
+          <TabsTrigger value="open-leads">Open Leads</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="my-leads" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Leads assigned to you ({myLeads?.length || 0})
+            </p>
+          </div>
+          <DataTable
+            columns={columns}
+            data={myLeads || []}
+            loading={isMyLeadsLoading}
+            onFilter={setFilters}
+            filters={filterComponents}
+          />
+        </TabsContent>
+
+        <TabsContent value="open-leads" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Unassigned leads available for claiming ({openLeads?.length || 0})
+              {currentUser?.role === 'health_coach' && (
+                <span className="ml-2 text-amber-600">
+                  • Health coaches can only see leads older than 24 hours
+                </span>
+              )}
+            </p>
+          </div>
+          <DataTable
+            columns={columns}
+            data={openLeads || []}
+            loading={isOpenLeadsLoading}
+            onFilter={setFilters}
+            filters={filterComponents}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* HHQ Dialog */}
       <Dialog open={isHHQOpen} onOpenChange={setIsHHQOpen}>
