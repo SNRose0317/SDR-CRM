@@ -772,27 +772,42 @@ export class DatabaseStorage implements IStorage {
     
     const hhq = result[0];
     
-    // Log activity
-    await this.createActivityLog({
-      entityType: 'lead',
-      entityId: hhq.leadId,
-      action: 'hhq_appointment_booked',
-      details: `Appointment booked`,
-      userId: null
-    });
-    
-    // Update lead status when appointment is booked
-    await this.updateLead(hhq.leadId, {
-      status: 'Booking: Paid/Booked'
-    });
-    
     // Get the appointment to find the health coach
     const appointment = await this.getAppointment(appointmentId);
-    if (appointment && appointment.userId) {
-      // Convert lead to contact with health coach as owner
+    if (!appointment || !appointment.userId) {
+      throw new Error('Appointment or health coach not found');
+    }
+
+    // Use person-based conversion if person_id exists, otherwise fallback to old system
+    if (hhq.personId) {
+      // NEW SYSTEM: Salesforce-style conversion using person_id
+      const person = await this.getPerson(hhq.personId);
+      if (person && person.lifecycleStage === 'lead') {
+        // Convert person from lead to contact
+        const convertedPerson = await this.convertPersonToContact(hhq.personId, appointment.userId);
+        
+        // Update person lead status to indicate conversion completion
+        await this.updatePerson(hhq.personId, {
+          leadStatus: 'Booking: Paid/Booked'
+        });
+        
+        // Log the conversion
+        await this.createActivityLog({
+          entityType: 'person',
+          entityId: person.id,
+          action: 'converted_to_contact',
+          details: `Person ${hhq.personId} converted from lead to contact after HHQ completion`,
+          userId: appointment.userId
+        });
+      }
+    } else if (hhq.leadId) {
+      // OLD SYSTEM: Fallback for legacy data
+      await this.updateLead(hhq.leadId, {
+        status: 'Booking: Paid/Booked'
+      });
+      
       const contact = await this.convertLeadToContact(hhq.leadId, appointment.userId);
       
-      // Log the conversion
       await this.createActivityLog({
         entityType: 'contact',
         entityId: contact.id,
@@ -807,23 +822,50 @@ export class DatabaseStorage implements IStorage {
 
   // Reset HHQ and sync lead status
   async resetHealthQuestionnaire(leadId: number): Promise<void> {
-    // Delete the HHQ record
-    await db.delete(healthQuestionnaires)
+    // Get the HHQ record to check if it has person_id
+    const hhq = await db.select().from(healthQuestionnaires)
       .where(eq(healthQuestionnaires.leadId, leadId));
     
-    // Reset lead status back to New
-    await this.updateLead(leadId, {
-      status: 'New'
-    });
-    
-    // Log activity
-    await this.createActivityLog({
-      entityType: 'lead',
-      entityId: leadId,
-      action: 'hhq_reset',
-      details: `Health History Questionnaire reset`,
-      userId: null
-    });
+    if (hhq.length > 0 && hhq[0].personId) {
+      // NEW SYSTEM: Reset person-based HHQ
+      await db.delete(healthQuestionnaires)
+        .where(eq(healthQuestionnaires.personId, hhq[0].personId));
+      
+      // Reset person lead status back to New
+      await this.updatePerson(hhq[0].personId, {
+        leadStatus: 'New'
+      });
+      
+      // Log activity
+      const person = await this.getPerson(hhq[0].personId);
+      if (person) {
+        await this.createActivityLog({
+          entityType: 'person',
+          entityId: person.id,
+          action: 'hhq_reset',
+          details: `Health History Questionnaire reset for ${hhq[0].personId}`,
+          userId: null
+        });
+      }
+    } else {
+      // OLD SYSTEM: Fallback for legacy data
+      await db.delete(healthQuestionnaires)
+        .where(eq(healthQuestionnaires.leadId, leadId));
+      
+      // Reset lead status back to New
+      await this.updateLead(leadId, {
+        status: 'New'
+      });
+      
+      // Log activity
+      await this.createActivityLog({
+        entityType: 'lead',
+        entityId: leadId,
+        action: 'hhq_reset',
+        details: `Health History Questionnaire reset`,
+        userId: null
+      });
+    }
   }
 
   // Complete HHQ process and sync lead status
@@ -839,16 +881,28 @@ export class DatabaseStorage implements IStorage {
     
     const hhq = result[0];
     
-    // Log activity
-    await this.createActivityLog({
-      entityType: 'lead',
-      entityId: hhq.leadId,
-      action: 'hhq_completed',
-      details: `Health History Questionnaire completed`,
-      userId: null
-    });
+    // Log activity using person_id if available, fallback to lead_id
+    if (hhq.personId) {
+      const person = await this.getPerson(hhq.personId);
+      if (person) {
+        await this.createActivityLog({
+          entityType: 'person',
+          entityId: person.id,
+          action: 'hhq_completed',
+          details: `Health History Questionnaire completed for ${hhq.personId}`,
+          userId: null
+        });
+      }
+    } else if (hhq.leadId) {
+      await this.createActivityLog({
+        entityType: 'lead',
+        entityId: hhq.leadId,
+        action: 'hhq_completed',
+        details: `Health History Questionnaire completed`,
+        userId: null
+      });
+    }
     
-    // Keep lead status as is when HHQ is completed (usually stays at "Booking: Paid/Booked")
     return hhq;
   }
 
