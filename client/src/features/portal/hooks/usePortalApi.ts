@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useCallback } from "react";
+import { useCallback } from "react";
 
 const usePortalApi = () => {
-  const token = useMemo(() => localStorage.getItem('portalToken'), []);
-  
   const portalRequest = useCallback(async (endpoint: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem('portalToken');
+    
     if (!token) {
       throw new Error('No authentication token');
     }
@@ -23,9 +23,9 @@ const usePortalApi = () => {
     }
 
     return response.json();
-  }, [token]);
+  }, []);
 
-  return { portalRequest, hasToken: !!token };
+  return { portalRequest, hasToken: !!localStorage.getItem('portalToken') };
 };
 
 export const usePatientProfile = () => {
