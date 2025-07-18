@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import DataTable from "@/shared/components/data-display/data-table";
 import LeadForm from "@/features/leads/components/lead-form";
 import { PhoneDialerDialog } from "@/features/leads/components/phone-dialer-dialog";
@@ -35,6 +36,7 @@ export default function Leads() {
   const [activeTab, setActiveTab] = useState<"my-leads" | "open-leads">("my-leads");
   const [isDialerOpen, setIsDialerOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -194,7 +196,62 @@ export default function Leads() {
     queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
   };
 
+  // Multi-select helper functions
+  const handleSelectLead = (leadId: number, checked: boolean) => {
+    const newSelectedIds = new Set(selectedLeadIds);
+    if (checked) {
+      newSelectedIds.add(leadId);
+    } else {
+      newSelectedIds.delete(leadId);
+    }
+    setSelectedLeadIds(newSelectedIds);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && leads) {
+      const allIds = new Set(leads.map(lead => lead.id));
+      setSelectedLeadIds(allIds);
+    } else {
+      setSelectedLeadIds(new Set());
+    }
+  };
+
+  const handleAddSelectedToDialer = () => {
+    if (selectedLeadIds.size === 0) {
+      toast({
+        title: "No leads selected",
+        description: "Please select at least one lead to add to the dialer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentLeads = activeTab === "my-leads" ? myLeads : openLeads;
+    const selectedLeadsForDialer = currentLeads?.filter(lead => selectedLeadIds.has(lead.id)) || [];
+    
+    setSelectedLeads(selectedLeadsForDialer);
+    setIsDialerOpen(true);
+    setSelectedLeadIds(new Set()); // Clear selection after adding to dialer
+  };
+
   const columns = [
+    {
+      key: "select",
+      label: (
+        <Checkbox
+          checked={leads?.length > 0 && selectedLeadIds.size === leads?.length}
+          onCheckedChange={handleSelectAll}
+          aria-label="Select all leads"
+        />
+      ),
+      render: (_: any, row: Lead) => (
+        <Checkbox
+          checked={selectedLeadIds.has(row.id)}
+          onCheckedChange={(checked) => handleSelectLead(row.id, checked as boolean)}
+          aria-label={`Select lead ${row.firstName} ${row.lastName}`}
+        />
+      ),
+    },
     {
       key: "name",
       label: "Lead Name",
@@ -422,6 +479,16 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Lead Management</h2>
         <div className="flex items-center gap-2">
+          {selectedLeadIds.size > 0 && (
+            <Button
+              onClick={handleAddSelectedToDialer}
+              variant="default"
+              className="flex items-center gap-2"
+            >
+              <Phone className="h-4 w-4" />
+              Add {selectedLeadIds.size} to Dialer
+            </Button>
+          )}
           <Button
             onClick={() => {
               const currentLeads = activeTab === "my-leads" ? myLeads : openLeads;
@@ -440,7 +507,7 @@ export default function Leads() {
             disabled={!leads || leads.length === 0}
           >
             <PhoneCall className="w-4 h-4 mr-2" />
-            Bulk Dialer
+            Bulk Dialer (All)
           </Button>
           <EntityAssignment currentUser={currentUser} entityType="leads" />
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -468,7 +535,11 @@ export default function Leads() {
 
       <Tabs 
         value={activeTab} 
-        onValueChange={(value) => setActiveTab(value as "my-leads" | "open-leads")}
+        onValueChange={(value) => {
+          setActiveTab(value as "my-leads" | "open-leads");
+          // Clear selection when switching tabs
+          setSelectedLeadIds(new Set());
+        }}
       >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="my-leads">My Leads</TabsTrigger>
