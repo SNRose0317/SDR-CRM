@@ -389,6 +389,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Portal routes
   app.use("/api/portal", portalRoutes);
 
+  // Lead claiming routes
+  app.post("/api/leads/:leadId/claim", async (req, res) => {
+    try {
+      const { leadId } = req.params;
+      const { userId } = req.body;
+
+      if (!leadId || !userId) {
+        return res.status(400).json({ message: 'Lead ID and User ID are required' });
+      }
+
+      const result = await storage.claimLead(parseInt(leadId), parseInt(userId));
+      return res.json(result);
+    } catch (error) {
+      console.error('Error claiming lead:', error);
+      return res.status(500).json({ message: 'Failed to claim lead' });
+    }
+  });
+
+  app.get("/api/leads/available/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const availableLeads = await storage.getAvailableLeads(parseInt(userId));
+      return res.json({ success: true, data: { leads: availableLeads } });
+    } catch (error) {
+      console.error('Error getting available leads:', error);
+      return res.status(500).json({ message: 'Failed to get available leads' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

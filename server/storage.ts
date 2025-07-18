@@ -37,6 +37,10 @@ export interface IStorage {
   deleteLead(id: number): Promise<void>;
   getLeadStats(): Promise<any>;
   
+  // Lead claiming operations
+  claimLead(leadId: number, userId: number): Promise<any>;
+  getAvailableLeads(userId: number): Promise<Lead[]>;
+  
   // Contact operations
   getContacts(filters?: any): Promise<Contact[]>;
   getContact(id: number): Promise<Contact | undefined>;
@@ -485,6 +489,123 @@ export class DatabaseStorage implements IStorage {
       totalTasks: totalTasks[0].count,
       totalAppointments: totalAppointments[0].count
     };
+  }
+
+  // Lead claiming operations
+  async claimLead(leadId: number, userId: number): Promise<any> {
+    // Get the lead and user info
+    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (!lead) {
+      throw new Error('Lead not found');
+    }
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if lead is already claimed
+    if (lead.poolStatus === 'claimed') {
+      throw new Error('Lead is already claimed');
+    }
+
+    // Check if user has permission to claim this lead
+    const canClaim = await this.canUserClaimLead(user.role, lead.poolEnteredAt);
+    if (!canClaim.allowed) {
+      throw new Error(canClaim.reason || 'Cannot claim this lead');
+    }
+
+    // Claim the lead
+    const [updatedLead] = await db.update(leads)
+      .set({
+        ownerId: userId,
+        poolStatus: 'claimed',
+        claimedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(leads.id, leadId))
+      .returning();
+
+    // Log the activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: leadId,
+      userId: userId,
+      action: 'lead_claimed',
+      details: `Lead claimed by ${user.firstName} ${user.lastName} (${user.role})`,
+    });
+
+    return {
+      success: true,
+      message: 'Lead claimed successfully',
+      data: { lead: updatedLead }
+    };
+  }
+
+  async getAvailableLeads(userId: number): Promise<Lead[]> {
+    // Get user info
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    let availableLeads: Lead[];
+
+    if (user.role === 'SDR') {
+      // SDRs can see all open leads
+      availableLeads = await db.select().from(leads)
+        .where(eq(leads.poolStatus, 'open'))
+        .orderBy(desc(leads.poolEnteredAt));
+    } else if (user.role === 'health_coach') {
+      // Health Coaches can see leads that are:
+      // 1. Open and older than 24 hours
+      // 2. Available to health coaches
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      
+      availableLeads = await db.select().from(leads)
+        .where(
+          or(
+            and(
+              eq(leads.poolStatus, 'open'),
+              sql`${leads.poolEnteredAt} < ${twentyFourHoursAgo}`
+            ),
+            eq(leads.poolStatus, 'available_to_health_coaches')
+          )
+        )
+        .orderBy(desc(leads.poolEnteredAt));
+    } else {
+      throw new Error('User role not authorized to claim leads');
+    }
+
+    return availableLeads;
+  }
+
+  // Helper function to check if a user can claim a lead
+  private async canUserClaimLead(userRole: string, leadEnteredAt: Date | null): Promise<{allowed: boolean, reason?: string}> {
+    if (!leadEnteredAt) {
+      return { allowed: false, reason: 'Lead has no entry date' };
+    }
+
+    const now = new Date();
+    const hoursElapsed = (now.getTime() - leadEnteredAt.getTime()) / (1000 * 60 * 60);
+
+    if (userRole === 'SDR') {
+      // SDRs can claim leads anytime
+      return { allowed: true };
+    } else if (userRole === 'health_coach') {
+      // Health Coaches can only claim leads after 24 hours
+      if (hoursElapsed >= 24) {
+        return { allowed: true };
+      } else {
+        return { 
+          allowed: false, 
+          reason: `Lead is still in SDR claiming period. ${Math.ceil(24 - hoursElapsed)} hours remaining.` 
+        };
+      }
+    } else {
+      return { allowed: false, reason: 'User role not authorized to claim leads' };
+    }
   }
 }
 

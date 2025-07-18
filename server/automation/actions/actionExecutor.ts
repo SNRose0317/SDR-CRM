@@ -32,6 +32,9 @@ export class ActionExecutor {
         case AutomationActionType.SEND_EMAIL:
           return await this.sendEmail(action, context);
         
+        case 'update_pool_status':
+          return await this.updatePoolStatus(action, context);
+        
         default:
           return {
             success: false,
@@ -250,6 +253,50 @@ export class ActionExecutor {
       return {
         success: false,
         message: 'Failed to send email',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  // Update pool status for lead claiming workflow
+  private async updatePoolStatus(action: TriggerAction, context: AutomationContext): Promise<AutomationResult> {
+    try {
+      const { poolStatus } = action.parameters;
+      
+      if (context.entityType !== 'lead') {
+        return {
+          success: false,
+          message: 'Pool status update only applies to leads',
+          error: 'Invalid entity type'
+        };
+      }
+
+      await db.update(leads)
+        .set({ poolStatus })
+        .where(eq(leads.id, context.entityId));
+
+      // Log the activity
+      await this.logActivity({
+        id: `pool-status-${Date.now()}`,
+        type: AutomationActionType.LOG_ACTIVITY,
+        parameters: {
+          action: 'pool_status_updated',
+          details: `Pool status updated to ${poolStatus}`,
+          entityType: 'lead',
+          entityId: context.entityId
+        },
+        order: 1
+      }, context);
+
+      return {
+        success: true,
+        message: `Pool status updated to ${poolStatus}`,
+        data: { poolStatus }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to update pool status',
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }

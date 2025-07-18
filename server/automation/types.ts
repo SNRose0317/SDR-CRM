@@ -23,7 +23,7 @@ export interface TriggerCondition {
 
 export interface TriggerAction {
   id: string;
-  type: 'create_task' | 'send_email' | 'update_status' | 'assign_user' | 'create_notification' | 'webhook' | 'create_lead' | 'update_lead';
+  type: 'create_task' | 'send_email' | 'update_status' | 'assign_user' | 'create_notification' | 'webhook' | 'create_lead' | 'update_lead' | 'update_pool_status';
   parameters: Record<string, any>;
   delay?: number; // in minutes
   order: number;
@@ -51,6 +51,8 @@ export enum AutomationEventType {
   LEAD_STATUS_CHANGED = 'lead.status_changed',
   LEAD_ASSIGNED = 'lead.assigned',
   LEAD_CONVERTED = 'lead.converted',
+  LEAD_POOL_EXPIRED = 'lead.pool_expired',
+  LEAD_CLAIMED = 'lead.claimed',
   
   // Contact Events
   CONTACT_CREATED = 'contact.created',

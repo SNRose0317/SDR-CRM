@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from "@shared/schema";
 import type { FilterOptions } from "@/lib/types";
+import LeadClaiming from "@/features/leads/components/lead-claiming";
 
 const statusColors = {
   "HHQ Started": "bg-amber-500/20 text-amber-500",
@@ -56,6 +57,9 @@ export default function Leads() {
       return Array.isArray(data) ? data : [];
     },
   });
+
+  // Mock current user for demo - in real app this would come from auth
+  const currentUser = users?.[0]; // This would be the logged-in user
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -230,14 +234,16 @@ export default function Leads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Lead Management</h2>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Lead
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+        <div className="flex items-center gap-2">
+          <LeadClaiming currentUser={currentUser} />
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Lead
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>
                 {selectedLead ? "Edit Lead" : "Add New Lead"}
@@ -249,7 +255,8 @@ export default function Leads() {
               onCancel={handleFormClose}
             />
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <DataTable

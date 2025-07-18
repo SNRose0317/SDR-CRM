@@ -83,12 +83,20 @@ export const leads = pgTable("leads", {
   source: varchar("source"),
   leadScore: integer("lead_score").default(0),
   notes: text("notes"),
+  ownerId: integer("owner_id").references(() => users.id),
   healthCoachBookedWith: integer("health_coach_booked_with").references(() => users.id),
+  poolStatus: varchar("pool_status").default("open").notNull(),
+  poolEnteredAt: timestamp("pool_entered_at").defaultNow(),
+  claimedAt: timestamp("claimed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [leads.ownerId],
+    references: [users.id],
+  }),
   healthCoach: one(users, {
     fields: [leads.healthCoachBookedWith],
     references: [users.id],
