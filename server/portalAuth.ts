@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { db } from './db';
-import { users, contacts, portalSessions } from '@shared/schema';
-import { eq, and, gt } from 'drizzle-orm';
+import { users, contacts, leads, portalSessions } from '@shared/schema';
+import { eq, and, gt, or } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import bcrypt from 'bcrypt';
 
@@ -10,62 +10,114 @@ interface PortalUser {
   email: string;
   firstName: string;
   lastName: string;
-  contactId?: number;
-  contact?: any;
+  userType: 'lead' | 'contact';
+  entityId: number;
 }
 
 export class PortalAuthService {
-  async loginPatient(email: string, password: string): Promise<{
+  async loginExternalUser(email: string, password: string): Promise<{
     user: PortalUser;
     sessionToken: string;
   } | null> {
-    // Find user with Patient role
-    const [userResult] = await db
+    // First try to find as a lead
+    const [leadResult] = await db
       .select()
-      .from(users)
-      .where(
-        and(
-          eq(users.email, email),
-          eq(users.role, 'Patient')
-        )
-      );
+      .from(leads)
+      .where(eq(leads.email, email));
 
-    if (!userResult || !userResult.passwordHash) {
-      return null;
+    if (leadResult) {
+      // For leads, check if there's a user record for portal access
+      const [userResult] = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.email, email),
+            eq(users.portalAccess, true)
+          )
+        );
+
+      if (userResult && userResult.passwordHash) {
+        const isValidPassword = await bcrypt.compare(password, userResult.passwordHash);
+        if (isValidPassword) {
+          const sessionToken = nanoid(32);
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+          await db.insert(portalSessions).values({
+            leadId: leadResult.id,
+            sessionToken,
+            expiresAt,
+          });
+
+          return {
+            user: {
+              id: leadResult.id,
+              email: leadResult.email,
+              firstName: leadResult.firstName,
+              lastName: leadResult.lastName,
+              userType: 'lead',
+              entityId: leadResult.id,
+            },
+            sessionToken,
+          };
+        }
+      }
     }
 
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, userResult.passwordHash);
-    if (!isValidPassword) {
-      return null;
+    // Then try to find as a contact
+    const [contactResult] = await db
+      .select()
+      .from(contacts)
+      .where(eq(contacts.email, email));
+
+    if (contactResult) {
+      // For contacts, check if there's a user record for portal access
+      const [userResult] = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.email, email),
+            eq(users.portalAccess, true)
+          )
+        );
+
+      if (userResult && userResult.passwordHash) {
+        const isValidPassword = await bcrypt.compare(password, userResult.passwordHash);
+        if (isValidPassword) {
+          const sessionToken = nanoid(32);
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+          await db.insert(portalSessions).values({
+            contactId: contactResult.id,
+            sessionToken,
+            expiresAt,
+          });
+
+          return {
+            user: {
+              id: contactResult.id,
+              email: contactResult.email,
+              firstName: contactResult.firstName,
+              lastName: contactResult.lastName,
+              userType: 'contact',
+              entityId: contactResult.id,
+            },
+            sessionToken,
+          };
+        }
+      }
     }
 
-    // Create session
-    const sessionToken = nanoid(32);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    await db.insert(portalSessions).values({
-      userId: userResult.id,
-      sessionToken,
-      expiresAt,
-    });
-
-    return {
-      user: {
-        id: userResult.id,
-        email: userResult.email,
-        firstName: userResult.firstName,
-        lastName: userResult.lastName,
-      },
-      sessionToken,
-    };
+    return null;
   }
 
   async validateSession(sessionToken: string): Promise<PortalUser | null> {
     const [sessionResult] = await db
       .select()
       .from(portalSessions)
-      .leftJoin(users, eq(portalSessions.userId, users.id))
+      .leftJoin(leads, eq(portalSessions.leadId, leads.id))
+      .leftJoin(contacts, eq(portalSessions.contactId, contacts.id))
       .where(
         and(
           eq(portalSessions.sessionToken, sessionToken),
@@ -73,19 +125,38 @@ export class PortalAuthService {
         )
       );
 
-    if (!sessionResult || !sessionResult.users) {
+    if (!sessionResult) {
       return null;
     }
 
-    return {
-      id: sessionResult.users.id,
-      email: sessionResult.users.email,
-      firstName: sessionResult.users.firstName,
-      lastName: sessionResult.users.lastName,
-    };
+    // Check if it's a lead session
+    if (sessionResult.leads) {
+      return {
+        id: sessionResult.leads.id,
+        email: sessionResult.leads.email,
+        firstName: sessionResult.leads.firstName,
+        lastName: sessionResult.leads.lastName,
+        userType: 'lead',
+        entityId: sessionResult.leads.id,
+      };
+    }
+
+    // Check if it's a contact session
+    if (sessionResult.contacts) {
+      return {
+        id: sessionResult.contacts.id,
+        email: sessionResult.contacts.email,
+        firstName: sessionResult.contacts.firstName,
+        lastName: sessionResult.contacts.lastName,
+        userType: 'contact',
+        entityId: sessionResult.contacts.id,
+      };
+    }
+
+    return null;
   }
 
-  async logoutPatient(sessionToken: string): Promise<void> {
+  async logoutExternalUser(sessionToken: string): Promise<void> {
     await db.delete(portalSessions).where(eq(portalSessions.sessionToken, sessionToken));
   }
 }

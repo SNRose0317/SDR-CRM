@@ -28,13 +28,14 @@ router.post('/signup', async (req, res) => {
     // Hash password
     const passwordHash = await bcrypt.hash(validatedData.password, 10);
     
-    // Create user account
+    // Create user account with portal access
     const [newUser] = await db.insert(users).values({
       email: validatedData.email,
       firstName: validatedData.firstName,
       lastName: validatedData.lastName,
       passwordHash,
-      role: 'Patient',
+      role: 'patient',
+      portalAccess: true,
     }).returning();
     
     // Trigger automation for portal signup
@@ -90,7 +91,7 @@ router.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
   
   try {
-    const result = await authService.loginPatient(email, password);
+    const result = await authService.loginExternalUser(email, password);
     
     if (!result) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -120,7 +121,7 @@ router.post('/auth/logout', portalAuth, async (req: any, res) => {
   try {
     const sessionToken = req.headers.authorization?.replace('Bearer ', '');
     if (sessionToken) {
-      await authService.logoutPatient(sessionToken);
+      await authService.logoutExternalUser(sessionToken);
     }
     
     res.json({ message: 'Logged out successfully' });

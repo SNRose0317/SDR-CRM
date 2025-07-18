@@ -58,6 +58,8 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("patient"),
   passwordHash: varchar("password_hash"),
   profileImageUrl: varchar("profile_image_url"),
+  portalAccess: boolean("portal_access").default(false),
+  lastPortalLogin: timestamp("last_portal_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -208,11 +210,12 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   }),
 }));
 
-// Portal sessions table for patient portal authentication
+// Portal sessions table for external user (leads/contacts) authentication
 export const portalSessions = pgTable("portal_sessions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   contactId: integer("contact_id").references(() => contacts.id),
+  leadId: integer("lead_id").references(() => leads.id),
   sessionToken: varchar("session_token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -226,6 +229,10 @@ export const portalSessionsRelations = relations(portalSessions, ({ one }) => ({
   contact: one(contacts, {
     fields: [portalSessions.contactId],
     references: [contacts.id],
+  }),
+  lead: one(leads, {
+    fields: [portalSessions.leadId],
+    references: [leads.id],
   }),
 }));
 
@@ -270,7 +277,69 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
   createdAt: true,
 });
 
+// Portal messages table for secure communication between leads/contacts and staff
+export const portalMessages = pgTable("portal_messages", {
+  id: serial("id").primaryKey(),
+  contactId: integer("contact_id").references(() => contacts.id),
+  leadId: integer("lead_id").references(() => leads.id),
+  healthCoachId: integer("health_coach_id").references(() => users.id),
+  subject: varchar("subject").notNull(),
+  message: text("message").notNull(),
+  sentByPatient: boolean("sent_by_patient").notNull().default(false),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const portalMessagesRelations = relations(portalMessages, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [portalMessages.contactId],
+    references: [contacts.id],
+  }),
+  lead: one(leads, {
+    fields: [portalMessages.leadId],
+    references: [leads.id],
+  }),
+  healthCoach: one(users, {
+    fields: [portalMessages.healthCoachId],
+    references: [users.id],
+  }),
+}));
+
+// Portal notifications table for leads/contacts
+export const portalNotifications = pgTable("portal_notifications", {
+  id: serial("id").primaryKey(),
+  contactId: integer("contact_id").references(() => contacts.id),
+  leadId: integer("lead_id").references(() => leads.id),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  type: varchar("type").notNull().default("info"),
+  isRead: boolean("is_read").notNull().default(false),
+  actionUrl: varchar("action_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const portalNotificationsRelations = relations(portalNotifications, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [portalNotifications.contactId],
+    references: [contacts.id],
+  }),
+  lead: one(leads, {
+    fields: [portalNotifications.leadId],
+    references: [leads.id],
+  }),
+}));
+
 export const insertPortalSessionSchema = createInsertSchema(portalSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPortalMessageSchema = createInsertSchema(portalMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPortalNotificationSchema = createInsertSchema(portalNotifications).omit({
   id: true,
   createdAt: true,
 });
@@ -291,6 +360,10 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type PortalSession = typeof portalSessions.$inferSelect;
 export type InsertPortalSession = z.infer<typeof insertPortalSessionSchema>;
+export type PortalMessage = typeof portalMessages.$inferSelect;
+export type InsertPortalMessage = z.infer<typeof insertPortalMessageSchema>;
+export type PortalNotification = typeof portalNotifications.$inferSelect;
+export type InsertPortalNotification = z.infer<typeof insertPortalNotificationSchema>;
 
 // Signup schema for portal registration
 export const signupSchema = z.object({
