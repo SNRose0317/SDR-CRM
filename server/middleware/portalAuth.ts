@@ -19,7 +19,44 @@ export class PortalAuthService {
     user: PortalUser;
     sessionToken: string;
   } | null> {
-    // First try to find as a lead with portal access
+    // First try to find as a contact with portal access (prioritize contacts over leads)
+    const [contactResult] = await db
+      .select()
+      .from(contacts)
+      .where(
+        and(
+          eq(contacts.email, email),
+          eq(contacts.portalAccess, true)
+        )
+      );
+
+    if (contactResult && contactResult.passwordHash) {
+      const isValidPassword = await bcrypt.compare(password, contactResult.passwordHash);
+      if (isValidPassword) {
+        const sessionToken = nanoid(32);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        await db.insert(portalSessions).values({
+          contactId: contactResult.id,
+          sessionToken,
+          expiresAt,
+        });
+
+        return {
+          user: {
+            id: contactResult.id,
+            email: contactResult.email,
+            firstName: contactResult.firstName,
+            lastName: contactResult.lastName,
+            userType: 'contact',
+            entityId: contactResult.id,
+          },
+          sessionToken,
+        };
+      }
+    }
+
+    // Then try to find as a lead with portal access (only if no contact exists)
     const [leadResult] = await db
       .select()
       .from(leads)
@@ -56,42 +93,7 @@ export class PortalAuthService {
       }
     }
 
-    // Then try to find as a contact with portal access
-    const [contactResult] = await db
-      .select()
-      .from(contacts)
-      .where(
-        and(
-          eq(contacts.email, email),
-          eq(contacts.portalAccess, true)
-        )
-      );
 
-    if (contactResult && contactResult.passwordHash) {
-      const isValidPassword = await bcrypt.compare(password, contactResult.passwordHash);
-      if (isValidPassword) {
-        const sessionToken = nanoid(32);
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-        await db.insert(portalSessions).values({
-          contactId: contactResult.id,
-          sessionToken,
-          expiresAt,
-        });
-
-        return {
-          user: {
-            id: contactResult.id,
-            email: contactResult.email,
-            firstName: contactResult.firstName,
-            lastName: contactResult.lastName,
-            userType: 'contact',
-            entityId: contactResult.id,
-          },
-          sessionToken,
-        };
-      }
-    }
 
     return null;
   }

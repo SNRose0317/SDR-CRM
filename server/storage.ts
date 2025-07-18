@@ -56,6 +56,9 @@ export interface IStorage {
   deleteContact(id: number): Promise<void>;
   getContactStats(): Promise<any>;
   
+  // Lead to Contact conversion
+  convertLeadToContact(leadId: number, healthCoachId: number): Promise<Contact>;
+  
   // Task operations
   getTasks(filters?: any): Promise<Task[]>;
   getTask(id: number): Promise<Task | undefined>;
@@ -764,6 +767,22 @@ export class DatabaseStorage implements IStorage {
       status: 'Booking: Paid/Booked'
     });
     
+    // Get the appointment to find the health coach
+    const appointment = await this.getAppointment(appointmentId);
+    if (appointment && appointment.userId) {
+      // Convert lead to contact with health coach as owner
+      const contact = await this.convertLeadToContact(hhq.leadId, appointment.userId);
+      
+      // Log the conversion
+      await this.createActivityLog({
+        entityType: 'contact',
+        entityId: contact.id,
+        action: 'converted_from_lead',
+        details: `Lead LD-${hhq.leadId} converted to contact after HHQ completion`,
+        userId: appointment.userId
+      });
+    }
+    
     return hhq;
   }
 
@@ -812,6 +831,71 @@ export class DatabaseStorage implements IStorage {
     
     // Keep lead status as is when HHQ is completed (usually stays at "Booking: Paid/Booked")
     return hhq;
+  }
+
+  // Convert lead to contact when HHQ reaches "Booking: Paid/Booked"
+  async convertLeadToContact(leadId: number, healthCoachId: number): Promise<Contact> {
+    // Get the lead data
+    const lead = await this.getLead(leadId);
+    if (!lead) {
+      throw new Error('Lead not found');
+    }
+
+    // Create contact from lead data
+    const contact = await this.createContact({
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      phone: lead.phone,
+      stage: 'Intake', // First contact status
+      healthCoachId: healthCoachId,
+      leadId: leadId,
+      ownerId: healthCoachId, // Health coach becomes the owner
+      notes: lead.notes,
+      passwordHash: lead.passwordHash,
+      portalAccess: lead.portalAccess,
+      lastPortalLogin: lead.lastPortalLogin,
+    });
+
+    // Update all appointments to reference the new contact instead of lead
+    await db
+      .update(appointments)
+      .set({
+        contactId: contact.id,
+        leadId: null,
+        updatedAt: new Date()
+      })
+      .where(eq(appointments.leadId, leadId));
+
+    // Update all tasks to reference the new contact instead of lead
+    await db
+      .update(tasks)
+      .set({
+        contactId: contact.id,
+        leadId: null,
+        updatedAt: new Date()
+      })
+      .where(eq(tasks.leadId, leadId));
+
+    // Log the conversion activity
+    await this.createActivityLog({
+      entityType: 'contact',
+      entityId: contact.id,
+      action: 'lead_converted',
+      details: `Lead LD-${leadId} converted to contact by Health Coach ${healthCoachId}`,
+      userId: healthCoachId
+    });
+
+    // Log activity on the lead side as well
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: leadId,
+      action: 'converted_to_contact',
+      details: `Lead converted to contact CT-${contact.id}`,
+      userId: healthCoachId
+    });
+
+    return contact;
   }
 }
 

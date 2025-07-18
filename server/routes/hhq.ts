@@ -118,4 +118,20 @@ router.post("/:id/complete", async (req, res) => {
   }
 });
 
+// Test endpoint for manual lead-to-contact conversion
+router.post("/test-conversion", async (req, res) => {
+  try {
+    const { leadId, healthCoachId } = req.body;
+    const contact = await storage.convertLeadToContact(leadId, healthCoachId);
+    res.json({ 
+      success: true, 
+      contact: contact,
+      message: `Lead ${leadId} converted to contact ${contact.id}` 
+    });
+  } catch (error: any) {
+    console.error("Error converting lead to contact:", error);
+    res.status(500).json({ error: "Failed to convert lead to contact: " + error.message });
+  }
+});
+
 export default router;
