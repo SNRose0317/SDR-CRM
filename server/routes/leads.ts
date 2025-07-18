@@ -151,4 +151,16 @@ router.get("/open-leads/:userId", async (req, res) => {
   }
 });
 
+// Track phone call for a lead (increment call count and update last contacted)
+router.put("/:id/call", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const lead = await storage.trackPhoneCall(id);
+    res.json(lead);
+  } catch (error) {
+    console.error("Error tracking phone call:", error);
+    res.status(500).json({ message: "Failed to track phone call" });
+  }
+});
+
 export default router;

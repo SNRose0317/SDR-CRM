@@ -139,6 +139,32 @@ export default function Leads() {
     claimLeadMutation.mutate(leadId);
   };
 
+  const phoneCallMutation = useMutation({
+    mutationFn: async (leadId: number) => {
+      await apiRequest("PUT", `/api/leads/${leadId}/call`);
+    },
+    onSuccess: () => {
+      // Invalidate both tab queries to refresh the call count
+      queryClient.invalidateQueries({ queryKey: ["/api/leads/my-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
+      toast({
+        title: "Call logged",
+        description: "Call count updated for this lead",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePhoneCall = (leadId: number) => {
+    phoneCallMutation.mutate(leadId);
+  };
+
   const handleEdit = (lead: Lead) => {
     setSelectedLead(lead);
     setIsFormOpen(true);
@@ -196,7 +222,7 @@ export default function Leads() {
     },
     {
       key: "ownerId",
-      label: "Owner",
+      label: "Lead Sales Person",
       render: (value: number) => {
         const safeUsers = users || [];
         const owner = Array.isArray(safeUsers) ? safeUsers.find((u: any) => u.id === value) : undefined;
@@ -215,6 +241,60 @@ export default function Leads() {
       },
     },
     {
+      key: "lastContacted",
+      label: "Last Contacted",
+      sortable: true,
+      render: (value: string) => value ? new Date(value).toLocaleDateString() : (
+        <span className="text-muted-foreground">Never</span>
+      ),
+    },
+    {
+      key: "numberOfCalls",
+      label: "# of Calls",
+      sortable: true,
+      render: (value: number) => (
+        <div className="text-center">
+          <span className="font-mono">{value || 0}</span>
+        </div>
+      ),
+    },
+    {
+      key: "leadReadiness",
+      label: "Lead Readiness",
+      sortable: true,
+      render: (value: string) => {
+        const readinessColors = {
+          "Cold": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+          "Warm": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+          "Hot": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+          "Follow Up": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+        };
+        return (
+          <Badge className={readinessColors[value as keyof typeof readinessColors] || "bg-gray-100 text-gray-800"}>
+            {value || "Cold"}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "leadType",
+      label: "Lead Type",
+      sortable: true,
+      render: (value: string) => value || <span className="text-muted-foreground">-</span>,
+    },
+    {
+      key: "leadSource",
+      label: "Lead Source",
+      sortable: true,
+      render: (value: string) => value || <span className="text-muted-foreground">-</span>,
+    },
+    {
+      key: "leadOutcome",
+      label: "Lead Outcome",
+      sortable: true,
+      render: (value: string) => value || <span className="text-muted-foreground">-</span>,
+    },
+    {
       key: "email",
       label: "Email",
       sortable: true,
@@ -222,6 +302,17 @@ export default function Leads() {
     {
       key: "phone",
       label: "Phone",
+      render: (value: string, row: Lead) => value ? (
+        <button 
+          onClick={() => handlePhoneCall(row.id)}
+          className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+          title="Click to call and track call count"
+        >
+          {value}
+        </button>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      ),
     },
     {
       key: "createdAt",

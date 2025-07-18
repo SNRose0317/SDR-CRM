@@ -19,6 +19,10 @@ const formSchema = insertLeadSchema.extend({
   phone: z.string().optional(),
   ownerId: z.coerce.number().optional(),
   notes: z.string().optional(),
+  leadType: z.string().optional(),
+  leadSource: z.string().optional(),
+  leadOutcome: z.string().optional(),
+  leadReadiness: z.enum(["Cold", "Warm", "Hot", "Follow Up"]).optional(),
 });
 
 interface LeadFormProps {
@@ -45,6 +49,10 @@ export default function LeadForm({ lead, onSuccess, onCancel }: LeadFormProps) {
       status: lead?.status || "HHQ Started",
       ownerId: lead?.ownerId || undefined,
       notes: lead?.notes || "",
+      leadType: lead?.leadType || "",
+      leadSource: lead?.leadSource || "",
+      leadOutcome: lead?.leadOutcome || "",
+      leadReadiness: lead?.leadReadiness || "Cold",
     },
   });
 
@@ -183,6 +191,76 @@ export default function LeadForm({ lead, onSuccess, onCancel }: LeadFormProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="leadType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead Type</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Inbound, Outbound, Referral" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="leadSource"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead Source</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Website, Social Media, Partner" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="leadReadiness"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead Readiness</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select readiness level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Cold">Cold</SelectItem>
+                    <SelectItem value="Warm">Warm</SelectItem>
+                    <SelectItem value="Hot">Hot</SelectItem>
+                    <SelectItem value="Follow Up">Follow Up</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="leadOutcome"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lead Outcome</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Qualified, Not Interested, Follow Up" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

@@ -40,6 +40,7 @@ export const contactStageEnum = pgEnum("contact_stage", [
 export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "completed", "cancelled"]);
 export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
 export const appointmentStatusEnum = pgEnum("appointment_status", ["scheduled", "confirmed", "completed", "cancelled", "no_show"]);
+export const leadReadinessEnum = pgEnum("lead_readiness", ["Cold", "Warm", "Hot", "Follow Up"]);
 
 // Session storage table (required for auth)
 export const sessions = pgTable(
@@ -141,6 +142,15 @@ export const leads = pgTable("leads", {
   notes: text("notes"),
   ownerId: integer("owner_id").references(() => users.id),
   healthCoachBookedWith: integer("health_coach_booked_with").references(() => users.id),
+  
+  // New lead tracking fields
+  lastContacted: timestamp("last_contacted"),
+  leadOutcome: varchar("lead_outcome"),
+  numberOfCalls: integer("number_of_calls").default(0),
+  leadType: varchar("lead_type"),
+  leadSource: varchar("lead_source"),
+  leadReadiness: leadReadinessEnum("lead_readiness").default("Cold"),
+  
   passwordHash: varchar("password_hash"),
   portalAccess: boolean("portal_access").default(false),
   lastPortalLogin: timestamp("last_portal_login"),

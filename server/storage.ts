@@ -48,6 +48,7 @@ export interface IStorage {
   updateLead(id: number, lead: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: number): Promise<void>;
   getLeadStats(): Promise<any>;
+  trackPhoneCall(id: number): Promise<Lead>;
   
   // Entity assignment operations
   assignEntity(entityType: EntityType, entityId: number, userId: number): Promise<any>;
@@ -219,6 +220,37 @@ export class DatabaseStorage implements IStorage {
       })
     );
     return stats;
+  }
+
+  async trackPhoneCall(id: number): Promise<Lead> {
+    // Get current lead to increment call count
+    const currentLead = await this.getLead(id);
+    if (!currentLead) {
+      throw new Error('Lead not found');
+    }
+
+    const newCallCount = (currentLead.numberOfCalls || 0) + 1;
+    
+    const result = await db
+      .update(leads)
+      .set({ 
+        numberOfCalls: newCallCount,
+        lastContacted: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(leads.id, id))
+      .returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: id,
+      action: 'called',
+      details: `Phone call logged. Total calls: ${newCallCount}`,
+      userId: null
+    });
+    
+    return result[0];
   }
 
   // Contact operations
