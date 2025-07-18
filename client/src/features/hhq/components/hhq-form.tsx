@@ -293,9 +293,10 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
         </Card>
       )}
 
-      {currentStep === 2 && hhqData && !hhqData.isSigned && (
+      {currentStep === 2 && hhqData && (
         <SignatureStep 
           hhqId={hhqData.id} 
+          isSigned={hhqData.isSigned}
           onComplete={() => {
             setCurrentStep(3);
             setHhqData({ ...hhqData, isSigned: true });

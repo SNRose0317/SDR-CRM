@@ -12,17 +12,17 @@ import { FileSignature } from "lucide-react";
 interface SignatureStepProps {
   hhqId: number;
   onComplete: () => void;
+  isSigned?: boolean;
 }
 
-export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
-  const [agreed, setAgreed] = useState(false);
-  const [fullName, setFullName] = useState("");
+export function SignatureStep({ hhqId, onComplete, isSigned = false }: SignatureStepProps) {
+  const [agreed, setAgreed] = useState(isSigned);
   const { toast } = useToast();
 
   const signMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/hhq/${hhqId}/sign`, {
-        signatureData: fullName
+        signatureData: "Electronic signature accepted"
       });
       return response.json();
     },
@@ -43,14 +43,6 @@ export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
   });
 
   const handleSign = () => {
-    if (!fullName.trim()) {
-      toast({
-        title: "Name Required",
-        description: "Please enter your full name to sign.",
-        variant: "destructive",
-      });
-      return;
-    }
     signMutation.mutate();
   };
 
@@ -79,37 +71,49 @@ export function SignatureStep({ hhqId, onComplete }: SignatureStepProps) {
           </ul>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="fullName">Full Name (Electronic Signature)</Label>
-            <Input
-              id="fullName"
-              placeholder="Enter your full name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="mt-1"
-            />
+        {isSigned ? (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+            <div className="flex items-center justify-center space-x-2 text-green-700">
+              <FileSignature className="h-5 w-5" />
+              <span className="font-medium">Document Signed Successfully</span>
+            </div>
+            <p className="text-sm text-green-600 mt-1">
+              Your electronic signature has been recorded
+            </p>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="agree"
-              checked={agreed}
-              onCheckedChange={(checked) => setAgreed(checked as boolean)}
-            />
-            <Label htmlFor="agree" className="text-sm cursor-pointer">
-              I agree to the terms and conditions above and confirm that typing my name constitutes my electronic signature
-            </Label>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="agree"
+                checked={agreed}
+                onCheckedChange={(checked) => setAgreed(checked as boolean)}
+              />
+              <Label htmlFor="agree" className="text-sm cursor-pointer">
+                I agree to the terms and conditions above and confirm my electronic signature
+              </Label>
+            </div>
           </div>
-        </div>
+        )}
 
-        <Button
-          className="w-full"
-          onClick={handleSign}
-          disabled={!agreed || !fullName.trim() || signMutation.isPending}
-        >
-          {signMutation.isPending ? "Signing..." : "Sign Document"}
-        </Button>
+        {!isSigned && (
+          <Button
+            className="w-full"
+            onClick={handleSign}
+            disabled={!agreed || signMutation.isPending}
+          >
+            {signMutation.isPending ? "Signing..." : "Sign Document"}
+          </Button>
+        )}
+
+        {isSigned && (
+          <Button
+            className="w-full"
+            onClick={onComplete}
+          >
+            Continue to Payment
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
