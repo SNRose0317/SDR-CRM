@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import portalRoutes from "./portalRoutes";
+import ruleRoutes from "./rule-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard routes
@@ -388,6 +389,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Portal routes
   app.use("/api/portal", portalRoutes);
+
+  // Rule management routes
+  app.use("/api/rules", ruleRoutes);
 
   // Entity assignment routes
   app.post("/api/:entityType/:entityId/assign", async (req, res) => {

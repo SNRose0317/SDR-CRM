@@ -21,6 +21,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, isNull } from "drizzle-orm";
 import { canUserSeeEntity, canUserClaimEntity, DEFAULT_PERMISSIONS, type UserRole, type EntityType } from "@shared/permissions";
+import { ruleEngine } from "./rule-engine";
 
 export interface IStorage {
   // User operations
@@ -494,22 +495,50 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Permission-based lead access
+  // Permission-based lead access with rule engine
   async getLeadsForUser(userId: number, userRole: UserRole): Promise<Lead[]> {
     const allLeads = await db.select().from(leads).orderBy(desc(leads.createdAt));
     
-    return allLeads.filter(lead => 
-      canUserSeeEntity(userRole, 'lead', lead.ownerId, userId, lead.createdAt!, DEFAULT_PERMISSIONS)
-    );
+    // Filter leads based on rule engine permissions
+    const filteredLeads = [];
+    for (const lead of allLeads) {
+      // Check rule-based permissions first
+      const rulePermissions = await ruleEngine.evaluateUserAccess('lead', lead.id, userId);
+      if (rulePermissions.canRead) {
+        filteredLeads.push(lead);
+        continue;
+      }
+      
+      // Fallback to default permissions
+      if (canUserSeeEntity(userRole, 'lead', lead.ownerId, userId, lead.createdAt!, DEFAULT_PERMISSIONS)) {
+        filteredLeads.push(lead);
+      }
+    }
+    
+    return filteredLeads;
   }
 
-  // Permission-based contact access
+  // Permission-based contact access with rule engine
   async getContactsForUser(userId: number, userRole: UserRole): Promise<Contact[]> {
     const allContacts = await db.select().from(contacts).orderBy(desc(contacts.createdAt));
     
-    return allContacts.filter(contact => 
-      canUserSeeEntity(userRole, 'contact', contact.ownerId, userId, contact.createdAt!, DEFAULT_PERMISSIONS)
-    );
+    // Filter contacts based on rule engine permissions
+    const filteredContacts = [];
+    for (const contact of allContacts) {
+      // Check rule-based permissions first
+      const rulePermissions = await ruleEngine.evaluateUserAccess('contact', contact.id, userId);
+      if (rulePermissions.canRead) {
+        filteredContacts.push(contact);
+        continue;
+      }
+      
+      // Fallback to default permissions
+      if (canUserSeeEntity(userRole, 'contact', contact.ownerId, userId, contact.createdAt!, DEFAULT_PERMISSIONS)) {
+        filteredContacts.push(contact);
+      }
+    }
+    
+    return filteredContacts;
   }
 
   // Entity assignment (replaces claiming)

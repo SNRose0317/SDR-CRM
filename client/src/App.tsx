@@ -12,6 +12,7 @@ import Appointments from "@/features/appointments/pages/appointments";
 import Users from "@/features/users/pages/users";
 import Settings from "@/features/settings/pages/settings";
 import Workflows from "@/pages/workflows";
+import Rules from "@/features/workflows/pages/rules";
 
 import NotFound from "@/shared/pages/not-found";
 
@@ -84,6 +85,7 @@ function MainAppRouter() {
         <Route path="/appointments" component={Appointments} />
         <Route path="/users" component={Users} />
         <Route path="/workflows" component={Workflows} />
+        <Route path="/rules" component={Rules} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>

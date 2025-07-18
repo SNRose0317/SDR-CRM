@@ -344,6 +344,98 @@ export const insertPortalSessionSchema = createInsertSchema(portalSessions).omit
   createdAt: true,
 });
 
+// Permission Rules tables
+export const permissionRules = pgTable("permission_rules", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(1),
+  
+  // Rule subject (what entity type this rule applies to)
+  subjectType: varchar("subject_type").notNull(), // 'lead', 'contact', 'task', etc.
+  
+  // Rule condition
+  fieldName: varchar("field_name").notNull(), // 'createdAt', 'updatedAt', 'status', etc.
+  operator: varchar("operator").notNull(), // '>', '<', '=', '!=', 'contains', etc.
+  value: jsonb("value").notNull(), // The comparison value
+  
+  // Rule action
+  actionType: varchar("action_type").notNull(), // 'grant_access', 'assign_entity', etc.
+  
+  // Target (who the action applies to)
+  targetType: varchar("target_type").notNull(), // 'user', 'role', 'team', etc.
+  targetId: varchar("target_id"), // Specific user ID, role name, etc.
+  
+  // Permission details
+  permissions: jsonb("permissions").notNull(), // { read: true, write: false, assign: true }
+  
+  // Metadata
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const ruleEvaluations = pgTable("rule_evaluations", {
+  id: serial("id").primaryKey(),
+  ruleId: integer("rule_id").references(() => permissionRules.id),
+  entityType: varchar("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  userId: integer("user_id").references(() => users.id),
+  
+  // Evaluation result
+  matches: boolean("matches").notNull(),
+  permissions: jsonb("permissions").notNull(),
+  
+  // Cache metadata
+  evaluatedAt: timestamp("evaluated_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const ruleAuditLog = pgTable("rule_audit_log", {
+  id: serial("id").primaryKey(),
+  ruleId: integer("rule_id").references(() => permissionRules.id),
+  entityType: varchar("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  userId: integer("user_id").references(() => users.id),
+  
+  action: varchar("action").notNull(),
+  details: jsonb("details"),
+  
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const permissionRulesRelations = relations(permissionRules, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [permissionRules.createdBy],
+    references: [users.id],
+  }),
+  evaluations: many(ruleEvaluations),
+  auditLogs: many(ruleAuditLog),
+}));
+
+export const ruleEvaluationsRelations = relations(ruleEvaluations, ({ one }) => ({
+  rule: one(permissionRules, {
+    fields: [ruleEvaluations.ruleId],
+    references: [permissionRules.id],
+  }),
+  user: one(users, {
+    fields: [ruleEvaluations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const ruleAuditLogRelations = relations(ruleAuditLog, ({ one }) => ({
+  rule: one(permissionRules, {
+    fields: [ruleAuditLog.ruleId],
+    references: [permissionRules.id],
+  }),
+  user: one(users, {
+    fields: [ruleAuditLog.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertPortalMessageSchema = createInsertSchema(portalMessages).omit({
   id: true,
   createdAt: true,
@@ -374,6 +466,10 @@ export type PortalMessage = typeof portalMessages.$inferSelect;
 export type InsertPortalMessage = z.infer<typeof insertPortalMessageSchema>;
 export type PortalNotification = typeof portalNotifications.$inferSelect;
 export type InsertPortalNotification = z.infer<typeof insertPortalNotificationSchema>;
+export type PermissionRule = typeof permissionRules.$inferSelect;
+export type InsertPermissionRule = typeof permissionRules.$inferInsert;
+export type RuleEvaluation = typeof ruleEvaluations.$inferSelect;
+export type RuleAuditLog = typeof ruleAuditLog.$inferSelect;
 
 // Signup schema for portal registration
 export const signupSchema = z.object({
