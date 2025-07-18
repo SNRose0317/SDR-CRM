@@ -7,7 +7,8 @@ import {
   leads,
   contacts,
   healthQuestionnaires,
-  portalSessions
+  portalSessions,
+  appointments
 } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { signupSchema } from '@shared/schema';
@@ -284,9 +285,36 @@ router.post('/logout', portalAuth, async (req: any, res) => {
   }
 });
 
-// Placeholder endpoints for future implementation
+// Get patient appointments
 router.get('/patient/appointments', portalAuth, async (req: any, res) => {
-  res.json([]);
+  try {
+    const user = req.user;
+    const userId = user.entityId;
+    const userType = user.userType;
+    
+    let appointmentList = [];
+    
+    if (userType === 'lead') {
+      // Get appointments for leads
+      appointmentList = await db
+        .select()
+        .from(appointments)
+        .where(eq(appointments.leadId, userId))
+        .orderBy(desc(appointments.scheduledAt));
+    } else if (userType === 'contact') {
+      // Get appointments for contacts
+      appointmentList = await db
+        .select()
+        .from(appointments)
+        .where(eq(appointments.contactId, userId))
+        .orderBy(desc(appointments.scheduledAt));
+    }
+    
+    res.json(appointmentList);
+  } catch (error) {
+    console.error('Error fetching patient appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
 });
 
 router.get('/patient/messages', portalAuth, async (req: any, res) => {
