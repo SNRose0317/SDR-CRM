@@ -20,12 +20,12 @@ const WorkflowsPage: React.FC = () => {
     { value: 'admin', label: 'System Admin', description: 'Full system automation control' }
   ];
 
-  // Business-friendly workflow templates
+  // WHO-WHAT-WHEN workflow templates
   const existingWorkflows: WorkflowDefinition[] = [
     {
       id: 'portal-signup-workflow',
-      name: 'Portal Signup → Lead Assignment',
-      description: 'When someone signs up through portal, create lead and assign to next available SDR',
+      name: 'Portal User → CREATED → Convert to Lead + Assign SDR',
+      description: 'Portal User gets CREATED → Change to Lead + Assign to SDR + Create follow-up task',
       version: '1.0.0',
       isActive: true,
       nodes: [],
@@ -36,9 +36,9 @@ const WorkflowsPage: React.FC = () => {
       createdBy: 'admin',
     },
     {
-      id: 'lead-nurturing-workflow',
-      name: 'New Lead → Follow-up Tasks',
-      description: 'When new lead is created, automatically create follow-up tasks and notify team',
+      id: 'lead-status-workflow',
+      name: 'Lead → STATUS_CHANGED → Assign Health Coach',
+      description: 'Lead gets STATUS_CHANGED to HHQ Signed → Assign to Health Coach + Create booking task',
       version: '1.0.0',
       isActive: false,
       nodes: [],
@@ -49,9 +49,9 @@ const WorkflowsPage: React.FC = () => {
       createdBy: 'admin',
     },
     {
-      id: 'status-change-workflow',
-      name: 'Status Change → Team Notification',
-      description: 'When lead status changes to HHQ Signed, notify health coach and create booking task',
+      id: 'contact-updated-workflow',
+      name: 'Contact → UPDATED → Team Notification',
+      description: 'Contact gets UPDATED → Notify team on Slack + Create follow-up task if needed',
       version: '1.0.0',
       isActive: true,
       nodes: [],
