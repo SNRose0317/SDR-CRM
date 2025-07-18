@@ -24,14 +24,18 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface HHQFormProps {
-  lead: Lead;
+  lead?: Lead;
+  leadId?: number;
   onComplete?: () => void;
+  isPortalFlow?: boolean;
 }
 
-export function HHQForm({ lead, onComplete }: HHQFormProps) {
+export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [hhqData, setHhqData] = useState<HealthQuestionnaire | null>(null);
   const { toast } = useToast();
+
+  const actualLeadId = leadId || lead?.id;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -44,8 +48,8 @@ export function HHQForm({ lead, onComplete }: HHQFormProps) {
 
   // Check if HHQ already exists for this lead
   const { data: existingHhq } = useQuery({
-    queryKey: [`/api/hhq/lead/${lead.id}`],
-    enabled: !!lead.id,
+    queryKey: [`/api/hhq/lead/${actualLeadId}`],
+    enabled: !!actualLeadId,
   });
 
   // Create HHQ mutation
@@ -53,7 +57,7 @@ export function HHQForm({ lead, onComplete }: HHQFormProps) {
     mutationFn: async (data: FormData) => {
       const response = await apiRequest("POST", "/api/hhq", {
         ...data,
-        leadId: lead.id,
+        leadId: actualLeadId,
       });
       return response.json();
     },

@@ -5,7 +5,8 @@ import {
   users,
   activityLogs,
   leads,
-  contacts
+  contacts,
+  healthQuestionnaires
 } from '@shared/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { signupSchema } from '@shared/schema';
@@ -193,6 +194,48 @@ router.get('/patient/activities', portalAuth, async (req: any, res) => {
   } catch (error) {
     console.error('Activities fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch activities' });
+  }
+});
+
+// HHQ Status endpoint
+router.get('/hhq/status', portalAuth, async (req: any, res) => {
+  try {
+    const user = req.user;
+    const userId = user.entityId;
+    const userType = user.userType;
+    
+    if (userType !== 'lead') {
+      return res.json({ completed: true, isContact: true });
+    }
+    
+    const hhq = await db
+      .select()
+      .from(healthQuestionnaires)
+      .where(eq(healthQuestionnaires.leadId, userId))
+      .limit(1);
+    
+    if (hhq.length === 0) {
+      return res.json({ 
+        completed: false, 
+        exists: false 
+      });
+    }
+    
+    const questionnaire = hhq[0];
+    const completed = questionnaire.isSigned && questionnaire.isPaid && questionnaire.appointmentBooked;
+    
+    res.json({
+      completed,
+      exists: true,
+      isSigned: questionnaire.isSigned,
+      isPaid: questionnaire.isPaid,
+      appointmentScheduled: questionnaire.appointmentBooked,
+      completedAt: completed ? questionnaire.updatedAt : null,
+      id: questionnaire.id
+    });
+  } catch (error) {
+    console.error('HHQ status error:', error);
+    res.status(500).json({ error: 'Failed to fetch HHQ status' });
   }
 });
 

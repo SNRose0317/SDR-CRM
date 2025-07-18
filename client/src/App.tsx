@@ -23,6 +23,7 @@ import PortalDashboard from "@/features/portal/pages/portal-dashboard";
 import PortalAppointments from "@/features/portal/pages/portal-appointments";
 import PortalMessages from "@/features/portal/pages/portal-messages";
 import PortalProfile from "@/features/portal/pages/portal-profile";
+import PortalHHQ from "@/features/portal/pages/portal-hhq";
 import { usePortalAuth } from "@/features/portal/hooks/usePortalAuth";
 
 function PortalRouter() {
@@ -42,6 +43,7 @@ function PortalRouter() {
     <PortalLayout>
       <Switch>
         <Route path="/portal/dashboard" component={PortalDashboard} />
+        <Route path="/portal/hhq" component={PortalHHQ} />
         <Route path="/portal/appointments" component={PortalAppointments} />
         <Route path="/portal/messages" component={PortalMessages} />
         <Route path="/portal/profile" component={PortalProfile} />
@@ -61,6 +63,7 @@ function Router() {
       
       {/* Portal authenticated routes */}
       <Route path="/portal/dashboard" component={PortalRouter} />
+      <Route path="/portal/hhq" component={PortalRouter} />
       <Route path="/portal/appointments" component={PortalRouter} />
       <Route path="/portal/messages" component={PortalRouter} />
       <Route path="/portal/profile" component={PortalRouter} />
