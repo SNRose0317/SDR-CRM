@@ -94,4 +94,28 @@ router.get("/health-coaches", async (req, res) => {
   }
 });
 
+// Reset HHQ and sync lead status
+router.delete("/lead/:leadId/reset", async (req, res) => {
+  try {
+    const leadId = parseInt(req.params.leadId);
+    await storage.resetHealthQuestionnaire(leadId);
+    res.json({ message: "HHQ reset successfully and lead status synchronized" });
+  } catch (error: any) {
+    console.error("Error resetting HHQ:", error);
+    res.status(500).json({ error: "Failed to reset HHQ" });
+  }
+});
+
+// Complete HHQ process and sync lead status
+router.post("/:id/complete", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const hhq = await storage.completeHealthQuestionnaire(id);
+    res.json(hhq);
+  } catch (error: any) {
+    console.error("Error completing HHQ:", error);
+    res.status(500).json({ error: "Failed to complete HHQ" });
+  }
+});
+
 export default router;

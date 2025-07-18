@@ -661,6 +661,11 @@ export class DatabaseStorage implements IStorage {
       userId: null
     });
     
+    // Update lead status when HHQ is created/submitted
+    await this.updateLead(data.leadId, {
+      status: 'HHQ Started'
+    });
+    
     return result[0];
   }
 
@@ -756,6 +761,53 @@ export class DatabaseStorage implements IStorage {
       status: 'Booking: Paid/Booked'
     });
     
+    return hhq;
+  }
+
+  // Reset HHQ and sync lead status
+  async resetHealthQuestionnaire(leadId: number): Promise<void> {
+    // Delete the HHQ record
+    await db.delete(healthQuestionnaires)
+      .where(eq(healthQuestionnaires.leadId, leadId));
+    
+    // Reset lead status back to New
+    await this.updateLead(leadId, {
+      status: 'New'
+    });
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: leadId,
+      action: 'hhq_reset',
+      details: `Health History Questionnaire reset`,
+      userId: null
+    });
+  }
+
+  // Complete HHQ process and sync lead status
+  async completeHealthQuestionnaire(questionnaireId: number): Promise<HealthQuestionnaire> {
+    const result = await db
+      .update(healthQuestionnaires)
+      .set({
+        status: 'Completed',
+        updatedAt: new Date()
+      })
+      .where(eq(healthQuestionnaires.id, questionnaireId))
+      .returning();
+    
+    const hhq = result[0];
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: hhq.leadId,
+      action: 'hhq_completed',
+      details: `Health History Questionnaire completed`,
+      userId: null
+    });
+    
+    // Keep lead status as is when HHQ is completed (usually stays at "Booking: Paid/Booked")
     return hhq;
   }
 }
