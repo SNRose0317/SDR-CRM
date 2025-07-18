@@ -37,12 +37,24 @@ export default function Leads() {
         if (value) params.append(key, value.toString());
       });
       const response = await fetch(`/api/leads?${params}`);
-      return response.json();
+      if (!response.ok) {
+        throw new Error('Failed to fetch leads');
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
 
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
+    queryFn: async () => {
+      const response = await fetch('/api/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    },
   });
 
   const deleteMutation = useMutation({
@@ -114,7 +126,8 @@ export default function Leads() {
       key: "ownerId",
       label: "Owner",
       render: (value: number) => {
-        const owner = Array.isArray(users) ? users.find((u: any) => u.id === value) : undefined;
+        const safeUsers = users || [];
+        const owner = Array.isArray(safeUsers) ? safeUsers.find((u: any) => u.id === value) : undefined;
         return owner ? (
           <div className="flex items-center space-x-2">
             <Avatar>

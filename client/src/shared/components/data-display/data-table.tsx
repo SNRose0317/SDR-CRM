@@ -81,6 +81,9 @@ export default function DataTable({
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Ensure data is always an array
+  const safeData = Array.isArray(data) ? data : [];
+
   const handleSort = (column: string) => {
     if (!onSort) return;
     
@@ -159,14 +162,14 @@ export default function DataTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length === 0 ? (
+            {safeData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-center py-8">
                   <p className="text-muted-foreground">No data found</p>
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((row, index) => (
+              safeData.map((row, index) => (
                 <TableRow key={index} className="hover:bg-muted/50">
                   {columns.map((column) => (
                     <TableCell key={column.key}>
