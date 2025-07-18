@@ -85,9 +85,6 @@ export const leads = pgTable("leads", {
   notes: text("notes"),
   ownerId: integer("owner_id").references(() => users.id),
   healthCoachBookedWith: integer("health_coach_booked_with").references(() => users.id),
-  poolStatus: varchar("pool_status").default("open").notNull(),
-  poolEnteredAt: timestamp("pool_entered_at").defaultNow(),
-  claimedAt: timestamp("claimed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -116,6 +113,7 @@ export const contacts = pgTable("contacts", {
   stage: contactStageEnum("stage").notNull().default("Intake"),
   healthCoachId: integer("health_coach_id").references(() => users.id),
   leadId: integer("lead_id").references(() => leads.id),
+  ownerId: integer("owner_id").references(() => users.id),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -124,6 +122,10 @@ export const contacts = pgTable("contacts", {
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
   healthCoach: one(users, {
     fields: [contacts.healthCoachId],
+    references: [users.id],
+  }),
+  owner: one(users, {
+    fields: [contacts.ownerId],
     references: [users.id],
   }),
   lead: one(leads, {

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import DataTable from "@/shared/components/data-display/data-table";
 import ContactForm from "@/features/contacts/components/contact-form";
+import EntityAssignment from "@/features/leads/components/lead-claiming";
 import { Plus, Edit, Trash2, Eye, MoreHorizontal, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +56,9 @@ export default function Contacts() {
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
   });
+
+  // Mock current user for demo - in real app this would come from auth
+  const currentUser = users?.[0]; // This would be the logged-in user
 
   const { data: contactStats } = useQuery({
     queryKey: ["/api/contacts/stats"],
@@ -234,26 +238,29 @@ export default function Contacts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Contact Management</h2>
-        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Contact
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedContact ? "Edit Contact" : "Add New Contact"}
-              </DialogTitle>
-            </DialogHeader>
-            <ContactForm
-              contact={selectedContact}
-              onSuccess={handleFormClose}
-              onCancel={handleFormClose}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <EntityAssignment currentUser={currentUser} entityType="contacts" />
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Contact
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedContact ? "Edit Contact" : "Add New Contact"}
+                </DialogTitle>
+              </DialogHeader>
+              <ContactForm
+                contact={selectedContact}
+                onSuccess={handleFormClose}
+                onCancel={handleFormClose}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Healthcare Pipeline Stages */}

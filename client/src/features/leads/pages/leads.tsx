@@ -13,7 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from "@shared/schema";
 import type { FilterOptions } from "@/lib/types";
-import LeadClaiming from "@/features/leads/components/lead-claiming";
+import EntityAssignment from "@/features/leads/components/lead-claiming";
 
 const statusColors = {
   "HHQ Started": "bg-amber-500/20 text-amber-500",
@@ -235,7 +235,7 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Lead Management</h2>
         <div className="flex items-center gap-2">
-          <LeadClaiming currentUser={currentUser} />
+          <EntityAssignment currentUser={currentUser} entityType="leads" />
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
               <Button>

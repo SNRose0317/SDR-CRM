@@ -389,32 +389,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Portal routes
   app.use("/api/portal", portalRoutes);
 
-  // Lead claiming routes
-  app.post("/api/leads/:leadId/claim", async (req, res) => {
+  // Entity assignment routes
+  app.post("/api/:entityType/:entityId/assign", async (req, res) => {
     try {
-      const { leadId } = req.params;
+      const { entityType, entityId } = req.params;
       const { userId } = req.body;
 
-      if (!leadId || !userId) {
-        return res.status(400).json({ message: 'Lead ID and User ID are required' });
+      if (!entityType || !entityId || !userId) {
+        return res.status(400).json({ message: 'Entity type, entity ID, and user ID are required' });
       }
 
-      const result = await storage.claimLead(parseInt(leadId), parseInt(userId));
+      if (entityType !== 'leads' && entityType !== 'contacts') {
+        return res.status(400).json({ message: 'Entity type must be leads or contacts' });
+      }
+
+      const normalizedEntityType = entityType === 'leads' ? 'lead' : 'contact';
+      const result = await storage.assignEntity(normalizedEntityType, parseInt(entityId), parseInt(userId));
       return res.json(result);
     } catch (error) {
-      console.error('Error claiming lead:', error);
-      return res.status(500).json({ message: 'Failed to claim lead' });
+      console.error('Error assigning entity:', error);
+      return res.status(500).json({ message: 'Failed to assign entity' });
     }
   });
 
-  app.get("/api/leads/available/:userId", async (req, res) => {
+  app.get("/api/:entityType/available/:userId", async (req, res) => {
     try {
-      const { userId } = req.params;
-      const availableLeads = await storage.getAvailableLeads(parseInt(userId));
-      return res.json({ success: true, data: { leads: availableLeads } });
+      const { entityType, userId } = req.params;
+      const { userRole } = req.query;
+
+      if (!entityType || !userId || !userRole) {
+        return res.status(400).json({ message: 'Entity type, user ID, and user role are required' });
+      }
+
+      if (entityType !== 'leads' && entityType !== 'contacts') {
+        return res.status(400).json({ message: 'Entity type must be leads or contacts' });
+      }
+
+      const normalizedEntityType = entityType === 'leads' ? 'lead' : 'contact';
+      const availableEntities = await storage.getAvailableEntities(
+        parseInt(userId), 
+        userRole as any, 
+        normalizedEntityType
+      );
+      
+      return res.json({ success: true, data: { [entityType]: availableEntities } });
     } catch (error) {
-      console.error('Error getting available leads:', error);
-      return res.status(500).json({ message: 'Failed to get available leads' });
+      console.error('Error getting available entities:', error);
+      return res.status(500).json({ message: 'Failed to get available entities' });
+    }
+  });
+
+  // Permission-based entity listing
+  app.get("/api/:entityType/user/:userId", async (req, res) => {
+    try {
+      const { entityType, userId } = req.params;
+      const { userRole } = req.query;
+
+      if (!entityType || !userId || !userRole) {
+        return res.status(400).json({ message: 'Entity type, user ID, and user role are required' });
+      }
+
+      if (entityType !== 'leads' && entityType !== 'contacts') {
+        return res.status(400).json({ message: 'Entity type must be leads or contacts' });
+      }
+
+      let entities;
+      if (entityType === 'leads') {
+        entities = await storage.getLeadsForUser(parseInt(userId), userRole as any);
+      } else {
+        entities = await storage.getContactsForUser(parseInt(userId), userRole as any);
+      }
+      
+      return res.json(entities);
+    } catch (error) {
+      console.error('Error getting entities for user:', error);
+      return res.status(500).json({ message: 'Failed to get entities' });
     }
   });
 

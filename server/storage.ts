@@ -19,7 +19,8 @@ import {
   type InsertActivityLog
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, count, sql } from "drizzle-orm";
+import { eq, desc, and, or, like, count, sql, isNull } from "drizzle-orm";
+import { canUserSeeEntity, canUserClaimEntity, DEFAULT_PERMISSIONS, type UserRole, type EntityType } from "@shared/permissions";
 
 export interface IStorage {
   // User operations
@@ -31,18 +32,20 @@ export interface IStorage {
   
   // Lead operations
   getLeads(filters?: any): Promise<Lead[]>;
+  getLeadsForUser(userId: number, userRole: UserRole): Promise<Lead[]>;
   getLead(id: number): Promise<Lead | undefined>;
   createLead(lead: InsertLead): Promise<Lead>;
   updateLead(id: number, lead: Partial<InsertLead>): Promise<Lead>;
   deleteLead(id: number): Promise<void>;
   getLeadStats(): Promise<any>;
   
-  // Lead claiming operations
-  claimLead(leadId: number, userId: number): Promise<any>;
-  getAvailableLeads(userId: number): Promise<Lead[]>;
+  // Entity assignment operations
+  assignEntity(entityType: EntityType, entityId: number, userId: number): Promise<any>;
+  getAvailableEntities(userId: number, userRole: UserRole, entityType: EntityType): Promise<Lead[] | Contact[]>;
   
   // Contact operations
   getContacts(filters?: any): Promise<Contact[]>;
+  getContactsForUser(userId: number, userRole: UserRole): Promise<Contact[]>;
   getContact(id: number): Promise<Contact | undefined>;
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: number, contact: Partial<InsertContact>): Promise<Contact>;
@@ -491,121 +494,109 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  // Lead claiming operations
-  async claimLead(leadId: number, userId: number): Promise<any> {
-    // Get the lead and user info
-    const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+  // Permission-based lead access
+  async getLeadsForUser(userId: number, userRole: UserRole): Promise<Lead[]> {
+    const allLeads = await db.select().from(leads).orderBy(desc(leads.createdAt));
+    
+    return allLeads.filter(lead => 
+      canUserSeeEntity(userRole, 'lead', lead.ownerId, userId, lead.createdAt!, DEFAULT_PERMISSIONS)
+    );
+  }
+
+  // Permission-based contact access
+  async getContactsForUser(userId: number, userRole: UserRole): Promise<Contact[]> {
+    const allContacts = await db.select().from(contacts).orderBy(desc(contacts.createdAt));
+    
+    return allContacts.filter(contact => 
+      canUserSeeEntity(userRole, 'contact', contact.ownerId, userId, contact.createdAt!, DEFAULT_PERMISSIONS)
+    );
+  }
+
+  // Entity assignment (replaces claiming)
+  async assignEntity(entityType: EntityType, entityId: number, userId: number): Promise<any> {
+    // Get the entity and user info
     const [user] = await db.select().from(users).where(eq(users.id, userId));
-
-    if (!lead) {
-      throw new Error('Lead not found');
-    }
-
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Check if lead is already claimed
-    if (lead.poolStatus === 'claimed') {
-      throw new Error('Lead is already claimed');
+    let entity: any;
+    let table: any;
+    
+    if (entityType === 'lead') {
+      [entity] = await db.select().from(leads).where(eq(leads.id, entityId));
+      table = leads;
+    } else {
+      [entity] = await db.select().from(contacts).where(eq(contacts.id, entityId));
+      table = contacts;
     }
 
-    // Check if user has permission to claim this lead
-    const canClaim = await this.canUserClaimLead(user.role, lead.poolEnteredAt);
-    if (!canClaim.allowed) {
-      throw new Error(canClaim.reason || 'Cannot claim this lead');
+    if (!entity) {
+      throw new Error(`${entityType} not found`);
     }
 
-    // Claim the lead
-    const [updatedLead] = await db.update(leads)
+    // Check if entity is already assigned
+    if (entity.ownerId !== null) {
+      throw new Error(`${entityType} is already assigned to another user`);
+    }
+
+    // Check if user has permission to claim this entity
+    const canClaim = canUserClaimEntity(user.role as UserRole, entityType, entity.ownerId, entity.createdAt, DEFAULT_PERMISSIONS);
+    if (!canClaim.canClaim) {
+      throw new Error(canClaim.reason || `Cannot assign this ${entityType}`);
+    }
+
+    // Assign the entity
+    const [updatedEntity] = await db.update(table)
       .set({
         ownerId: userId,
-        poolStatus: 'claimed',
-        claimedAt: new Date(),
         updatedAt: new Date()
       })
-      .where(eq(leads.id, leadId))
+      .where(eq(table.id, entityId))
       .returning();
 
     // Log the activity
     await this.createActivityLog({
-      entityType: 'lead',
-      entityId: leadId,
+      entityType,
+      entityId,
       userId: userId,
-      action: 'lead_claimed',
-      details: `Lead claimed by ${user.firstName} ${user.lastName} (${user.role})`,
+      action: `${entityType}_assigned`,
+      details: `${entityType} assigned to ${user.firstName} ${user.lastName} (${user.role})`,
     });
 
     return {
       success: true,
-      message: 'Lead claimed successfully',
-      data: { lead: updatedLead }
+      message: `${entityType} assigned successfully`,
+      data: { [entityType]: updatedEntity }
     };
   }
 
-  async getAvailableLeads(userId: number): Promise<Lead[]> {
-    // Get user info
+  // Get available entities for assignment
+  async getAvailableEntities(userId: number, userRole: UserRole, entityType: EntityType): Promise<Lead[] | Contact[]> {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
       throw new Error('User not found');
     }
 
-    let availableLeads: Lead[];
+    let availableEntities: any[];
 
-    if (user.role === 'SDR') {
-      // SDRs can see all open leads
-      availableLeads = await db.select().from(leads)
-        .where(eq(leads.poolStatus, 'open'))
-        .orderBy(desc(leads.poolEnteredAt));
-    } else if (user.role === 'health_coach') {
-      // Health Coaches can see leads that are:
-      // 1. Open and older than 24 hours
-      // 2. Available to health coaches
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      
-      availableLeads = await db.select().from(leads)
-        .where(
-          or(
-            and(
-              eq(leads.poolStatus, 'open'),
-              sql`${leads.poolEnteredAt} < ${twentyFourHoursAgo}`
-            ),
-            eq(leads.poolStatus, 'available_to_health_coaches')
-          )
-        )
-        .orderBy(desc(leads.poolEnteredAt));
+    if (entityType === 'lead') {
+      // Get all unassigned leads
+      availableEntities = await db.select().from(leads)
+        .where(isNull(leads.ownerId))
+        .orderBy(desc(leads.createdAt));
     } else {
-      throw new Error('User role not authorized to claim leads');
+      // Get all unassigned contacts
+      availableEntities = await db.select().from(contacts)
+        .where(isNull(contacts.ownerId))
+        .orderBy(desc(contacts.createdAt));
     }
 
-    return availableLeads;
-  }
-
-  // Helper function to check if a user can claim a lead
-  private async canUserClaimLead(userRole: string, leadEnteredAt: Date | null): Promise<{allowed: boolean, reason?: string}> {
-    if (!leadEnteredAt) {
-      return { allowed: false, reason: 'Lead has no entry date' };
-    }
-
-    const now = new Date();
-    const hoursElapsed = (now.getTime() - leadEnteredAt.getTime()) / (1000 * 60 * 60);
-
-    if (userRole === 'SDR') {
-      // SDRs can claim leads anytime
-      return { allowed: true };
-    } else if (userRole === 'health_coach') {
-      // Health Coaches can only claim leads after 24 hours
-      if (hoursElapsed >= 24) {
-        return { allowed: true };
-      } else {
-        return { 
-          allowed: false, 
-          reason: `Lead is still in SDR claiming period. ${Math.ceil(24 - hoursElapsed)} hours remaining.` 
-        };
-      }
-    } else {
-      return { allowed: false, reason: 'User role not authorized to claim leads' };
-    }
+    // Filter based on permissions
+    return availableEntities.filter(entity => {
+      const canClaim = canUserClaimEntity(userRole, entityType, entity.ownerId, entity.createdAt, DEFAULT_PERMISSIONS);
+      return canClaim.canClaim;
+    });
   }
 }
 
