@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -113,7 +113,24 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
     { number: 4, title: "Book Appointment", completed: hhqData?.appointmentBooked },
   ];
 
-  // If HHQ exists, determine the current step
+  // Set step and data when existing HHQ loads
+  useEffect(() => {
+    if (existingHhq) {
+      const hhq = existingHhq as HealthQuestionnaire;
+      setHhqData(hhq);
+      
+      // Set the appropriate step based on completion status
+      if (!hhq.isSigned) {
+        setCurrentStep(2);
+      } else if (!hhq.isPaid) {
+        setCurrentStep(3);
+      } else if (!hhq.appointmentBooked) {
+        setCurrentStep(4);
+      }
+    }
+  }, [existingHhq]);
+
+  // If HHQ exists and is complete, show completion message
   if (existingHhq) {
     const hhq = existingHhq as HealthQuestionnaire;
     if (hhq.appointmentBooked) {
@@ -127,18 +144,6 @@ export function HHQForm({ lead, leadId, onComplete, isPortalFlow = false }: HHQF
           </CardHeader>
         </Card>
       );
-    }
-    
-    // Set the appropriate step based on completion status
-    if (!hhq.isSigned) {
-      setCurrentStep(2);
-      setHhqData(hhq);
-    } else if (!hhq.isPaid) {
-      setCurrentStep(3);
-      setHhqData(hhq);
-    } else if (!hhq.appointmentBooked) {
-      setCurrentStep(4);
-      setHhqData(hhq);
     }
   }
 
