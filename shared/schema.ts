@@ -86,6 +86,9 @@ export const leads = pgTable("leads", {
   notes: text("notes"),
   ownerId: integer("owner_id").references(() => users.id),
   healthCoachBookedWith: integer("health_coach_booked_with").references(() => users.id),
+  passwordHash: varchar("password_hash"),
+  portalAccess: boolean("portal_access").default(false),
+  lastPortalLogin: timestamp("last_portal_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -116,6 +119,9 @@ export const contacts = pgTable("contacts", {
   leadId: integer("lead_id").references(() => leads.id),
   ownerId: integer("owner_id").references(() => users.id),
   notes: text("notes"),
+  passwordHash: varchar("password_hash"),
+  portalAccess: boolean("portal_access").default(false),
+  lastPortalLogin: timestamp("last_portal_login"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

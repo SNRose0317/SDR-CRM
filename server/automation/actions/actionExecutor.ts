@@ -102,7 +102,7 @@ export class ActionExecutor {
         description: params.description,
         priority: params.priority || 'medium',
         status: params.status || 'todo',
-        assignedTo,
+        assigneeId: assignedTo,
         dueDate: params.dueDate ? new Date(params.dueDate) : new Date(Date.now() + 24 * 60 * 60 * 1000),
         // Link to lead if we have leadId in context
         leadId: context.metadata?.leadId || null,

@@ -19,93 +19,77 @@ export class PortalAuthService {
     user: PortalUser;
     sessionToken: string;
   } | null> {
-    // First try to find as a lead
+    // First try to find as a lead with portal access
     const [leadResult] = await db
       .select()
       .from(leads)
-      .where(eq(leads.email, email));
+      .where(
+        and(
+          eq(leads.email, email),
+          eq(leads.portalAccess, true)
+        )
+      );
 
-    if (leadResult) {
-      // For leads, check if there's a user record for portal access
-      const [userResult] = await db
-        .select()
-        .from(users)
-        .where(
-          and(
-            eq(users.email, email),
-            eq(users.portalAccess, true)
-          )
-        );
+    if (leadResult && leadResult.passwordHash) {
+      const isValidPassword = await bcrypt.compare(password, leadResult.passwordHash);
+      if (isValidPassword) {
+        const sessionToken = nanoid(32);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      if (userResult && userResult.passwordHash) {
-        const isValidPassword = await bcrypt.compare(password, userResult.passwordHash);
-        if (isValidPassword) {
-          const sessionToken = nanoid(32);
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await db.insert(portalSessions).values({
+          leadId: leadResult.id,
+          sessionToken,
+          expiresAt,
+        });
 
-          await db.insert(portalSessions).values({
-            leadId: leadResult.id,
-            sessionToken,
-            expiresAt,
-          });
-
-          return {
-            user: {
-              id: leadResult.id,
-              email: leadResult.email,
-              firstName: leadResult.firstName,
-              lastName: leadResult.lastName,
-              userType: 'lead',
-              entityId: leadResult.id,
-            },
-            sessionToken,
-          };
-        }
+        return {
+          user: {
+            id: leadResult.id,
+            email: leadResult.email,
+            firstName: leadResult.firstName,
+            lastName: leadResult.lastName,
+            userType: 'lead',
+            entityId: leadResult.id,
+          },
+          sessionToken,
+        };
       }
     }
 
-    // Then try to find as a contact
+    // Then try to find as a contact with portal access
     const [contactResult] = await db
       .select()
       .from(contacts)
-      .where(eq(contacts.email, email));
+      .where(
+        and(
+          eq(contacts.email, email),
+          eq(contacts.portalAccess, true)
+        )
+      );
 
-    if (contactResult) {
-      // For contacts, check if there's a user record for portal access
-      const [userResult] = await db
-        .select()
-        .from(users)
-        .where(
-          and(
-            eq(users.email, email),
-            eq(users.portalAccess, true)
-          )
-        );
+    if (contactResult && contactResult.passwordHash) {
+      const isValidPassword = await bcrypt.compare(password, contactResult.passwordHash);
+      if (isValidPassword) {
+        const sessionToken = nanoid(32);
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-      if (userResult && userResult.passwordHash) {
-        const isValidPassword = await bcrypt.compare(password, userResult.passwordHash);
-        if (isValidPassword) {
-          const sessionToken = nanoid(32);
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await db.insert(portalSessions).values({
+          contactId: contactResult.id,
+          sessionToken,
+          expiresAt,
+        });
 
-          await db.insert(portalSessions).values({
-            contactId: contactResult.id,
-            sessionToken,
-            expiresAt,
-          });
-
-          return {
-            user: {
-              id: contactResult.id,
-              email: contactResult.email,
-              firstName: contactResult.firstName,
-              lastName: contactResult.lastName,
-              userType: 'contact',
-              entityId: contactResult.id,
-            },
-            sessionToken,
-          };
-        }
+        return {
+          user: {
+            id: contactResult.id,
+            email: contactResult.email,
+            firstName: contactResult.firstName,
+            lastName: contactResult.lastName,
+            userType: 'contact',
+            entityId: contactResult.id,
+          },
+          sessionToken,
+        };
       }
     }
 

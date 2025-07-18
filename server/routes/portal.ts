@@ -14,60 +14,49 @@ import { automationManager } from '../automation/automationManager';
 const router = Router();
 const authService = new PortalAuthService();
 
-// Signup endpoint - creates user account and automatically creates a lead
+// Signup endpoint - creates lead directly with portal access
 router.post('/signup', async (req, res) => {
   try {
     const validatedData = signupSchema.parse(req.body);
     
-    // Check if user already exists
-    const existingUser = await db.select().from(users).where(eq(users.email, validatedData.email));
-    if (existingUser.length > 0) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+    // Check if lead already exists
+    const existingLead = await db.select().from(leads).where(eq(leads.email, validatedData.email));
+    if (existingLead.length > 0) {
+      return res.status(400).json({ error: 'An account already exists with this email' });
     }
     
     // Hash password
     const passwordHash = await bcrypt.hash(validatedData.password, 10);
     
-    // Create user account with portal access
-    const [newUser] = await db.insert(users).values({
+    // Create lead with portal access
+    const [newLead] = await db.insert(leads).values({
       email: validatedData.email,
       firstName: validatedData.firstName,
       lastName: validatedData.lastName,
+      phone: validatedData.phone,
+      state: validatedData.state,
       passwordHash,
-      role: 'patient',
       portalAccess: true,
+      status: 'HHQ Started',
+      source: 'Portal Signup',
+      notes: 'Lead created through portal signup',
     }).returning();
     
     // Trigger automation for portal signup
     const automationResults = await automationManager.triggerPortalSignup({
-      ...validatedData,
-      role: 'Patient',
-      id: newUser.id
-    }, newUser.id);
-    
-    // Get the lead that was created by automation
-    const leadCreationResult = automationResults.find(r => 
-      r.success && r.data && r.data.leadId
-    );
-    
-    let leadInfo = null;
-    if (leadCreationResult) {
-      leadInfo = leadCreationResult.data;
-    }
+      ...newLead,
+      role: 'Lead',
+    }, newLead.id);
     
     res.status(201).json({ 
       message: 'Account created successfully',
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
+      lead: {
+        id: newLead.id,
+        email: newLead.email,
+        firstName: newLead.firstName,
+        lastName: newLead.lastName,
+        status: newLead.status,
       },
-      lead: leadInfo ? {
-        id: leadInfo.leadId,
-        status: leadInfo.lead.status,
-        message: 'Lead created automatically - our team will contact you soon!'
-      } : null,
       automation: {
         triggered: automationResults.length > 0,
         results: automationResults.map(r => ({
@@ -99,11 +88,11 @@ router.post('/auth/login', async (req, res) => {
 
     // Log portal activity
     await db.insert(activityLogs).values({
-      entityType: 'user',
+      entityType: result.user.userType === 'lead' ? 'lead' : 'contact',
       entityId: result.user.id,
-      userId: result.user.id,
+      userId: null, // No system user for external users
       action: 'portal_login',
-      details: 'Patient logged into portal',
+      details: `${result.user.userType} logged into portal`,
     });
 
     res.json({

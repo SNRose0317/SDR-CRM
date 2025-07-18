@@ -27,22 +27,11 @@ export class SignupTrigger {
           id: 'signup-condition-1',
           field: 'role',
           operator: 'equals',
-          value: 'Patient'
+          value: 'Lead'
         }
       ],
       actions: [
-        {
-          id: 'signup-action-1',
-          type: AutomationActionType.CREATE_LEAD,
-          parameters: {
-            status: 'New',
-            source: 'Portal Signup',
-            leadScore: 0,
-            notes: 'Lead created automatically from portal signup',
-            priority: 'medium'
-          },
-          order: 1
-        },
+
         {
           id: 'signup-action-2',
           type: AutomationActionType.CREATE_TASK,
@@ -53,7 +42,7 @@ export class SignupTrigger {
             status: 'todo',
             dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
           },
-          order: 2
+          order: 1
         },
         {
           id: 'signup-action-3',
@@ -62,7 +51,7 @@ export class SignupTrigger {
             action: 'portal_signup_automation',
             details: 'Portal signup automation triggered - lead and task created'
           },
-          order: 3
+          order: 2
         }
       ],
       createdAt: new Date(),
