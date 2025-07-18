@@ -320,15 +320,47 @@ export type SortOptions<T> = {
 4. **Maintainability**: Changes to types propagate through the codebase
 5. **Consistency**: Standardized data structures across the application
 
-## When to Use
+## When We Would Need This
 
-Create types for:
-- Complex data structures
-- API request/response interfaces
-- Configuration objects
-- Filter and query parameters
-- Business domain objects
-- Third-party integrations
+We would create type files when:
+
+### Current State (Why we haven't needed them yet)
+- **Simple Schema**: Current types are defined directly in `shared/schema.ts` using Drizzle
+- **Basic Operations**: Simple CRUD operations don't require complex type definitions
+- **Limited Features**: Haven't implemented advanced features that need specialized types
+- **Small Type Surface**: Current API is simple with basic request/response patterns
+
+### Future Triggers (When we would create types)
+1. **Complex API Contracts**: When we build APIs with complex request/response structures for health data, scheduling, or integrations
+2. **Advanced Filtering**: When we implement sophisticated filtering with multiple criteria, date ranges, and complex search
+3. **Third-Party Integrations**: When we integrate with EHR systems, insurance APIs, or calendar services that have complex data structures
+4. **Health Data Complexity**: When we handle complex health questionnaires, care plans, medication lists, or health outcomes
+5. **Configuration Growth**: When we have complex configuration objects for scheduling rules, notification preferences, or system settings
+6. **Generic Patterns**: When we need reusable type patterns for common operations like pagination, sorting, or error handling
+
+### Example: When Health Data Gets Complex
+```typescript
+// Currently: Simple schema types
+type Lead = typeof leads.$inferSelect;
+
+// Would become: Complex health types when we add medical features
+interface HealthQuestionnaire {
+  id: string;
+  patientId: number;
+  responses: QuestionnaireResponse[];
+  riskScore: HealthRiskScore;
+  recommendations: CareRecommendation[];
+  completedAt: Date;
+}
+
+interface QuestionnaireResponse {
+  questionId: string;
+  category: HealthCategory;
+  answer: string | number | boolean | MultipleChoice;
+  weight: number;
+  riskContribution: number;
+}
+```
 
 ## Best Practices
 

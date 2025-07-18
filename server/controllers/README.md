@@ -94,11 +94,36 @@ export class LeadController {
 4. **Maintainability**: Changes to business logic don't affect routing
 5. **Scalability**: Easy to add new features and endpoints
 
-## When to Use
+## When We Would Need This
 
-Move logic to controllers when:
-- Route handlers become complex (>20 lines)
-- Business logic needs to be shared across routes
-- Complex validation or data transformation is required
-- Integration with multiple services is needed
-- Automated testing is required
+We would create controller files when:
+
+### Current Triggers (Why we haven't needed them yet)
+- **Simple CRUD Operations**: Our current routes in `server/routes/` are handling basic create, read, update, delete operations that don't require complex business logic
+- **Storage Layer Abstraction**: The `storage.ts` file currently handles most business logic through its comprehensive interface
+- **Small Route Handlers**: Most route handlers are under 20 lines and don't need extraction
+
+### Future Triggers (When we would create controllers)
+1. **Complex Lead Scoring**: When we implement sophisticated lead qualification algorithms that require multiple data sources and calculations
+2. **Multi-Step Workflows**: When appointment scheduling becomes complex with availability checking, conflict resolution, and automated notifications
+3. **Health Assessment Processing**: When we need to process health questionnaires with complex scoring, risk calculations, and care plan generation
+4. **Integration Complexity**: When we integrate with external EHR systems, insurance APIs, or calendar services
+5. **Advanced Permission Logic**: When the rule engine needs complex business logic coordination beyond simple database queries
+
+### Example: When Lead Management Gets Complex
+```typescript
+// Currently: Simple route handler
+router.post("/", async (req, res) => {
+  const leadData = insertLeadSchema.parse(req.body);
+  const lead = await storage.createLead(leadData);
+  res.status(201).json(lead);
+});
+
+// Would become: Controller when we add lead scoring
+router.post("/", leadController.createLead);
+// Where leadController.createLead handles:
+// - Lead qualification scoring
+// - Automated assignment logic
+// - Integration with marketing systems
+// - Automated follow-up creation
+```

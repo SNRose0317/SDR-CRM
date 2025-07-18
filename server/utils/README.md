@@ -237,16 +237,43 @@ export class FormatUtils {
 4. **Testability**: Utilities can be unit tested independently
 5. **Performance**: Optimized implementations for common operations
 
-## When to Use
+## When We Would Need This
 
-Create utilities for:
-- Functions used in multiple places
-- Data validation and formatting
-- Mathematical calculations
-- String manipulation
-- Date/time operations
-- Security and encryption
-- Performance optimizations
+We would create utility files when:
+
+### Current State (Why we haven't needed them yet)
+- **Basic Validation**: Simple validation is handled by Zod schemas
+- **Simple Formatting**: Basic data formatting is done inline
+- **No Complex Calculations**: Haven't implemented health scoring or advanced algorithms
+- **Standard Operations**: Using standard JavaScript/TypeScript for basic operations
+
+### Future Triggers (When we would create utilities)
+1. **Health Calculations**: When we implement BMI calculations, risk assessments, age-based recommendations
+2. **Data Formatting**: When we need consistent phone number formatting, name display, address formatting across the app
+3. **Date/Time Complexity**: When we implement business hours checking, appointment scheduling, time zone handling
+4. **Validation Rules**: When we need complex validation like insurance number formats, health ID validation
+5. **Security Requirements**: When we implement HIPAA-compliant data encryption, anonymization, secure logging
+6. **Performance Optimizations**: When we need caching utilities, data compression, or performance monitoring
+
+### Example: When Health Data Gets Complex
+```typescript
+// Currently: Simple data storage
+const leadData = {
+  firstName: req.body.firstName,
+  lastName: req.body.lastName,
+  email: req.body.email
+};
+
+// Would become: Multiple utilities when we add health features
+const leadData = {
+  firstName: FormatUtils.formatName(req.body.firstName),
+  lastName: FormatUtils.formatName(req.body.lastName),
+  email: ValidationUtils.sanitizeEmail(req.body.email),
+  phone: PhoneUtils.formatPhoneNumber(req.body.phone),
+  age: HealthUtils.calculateAge(req.body.birthDate),
+  bmiCategory: HealthUtils.getBMICategory(req.body.weight, req.body.height)
+};
+```
 
 ## Best Practices
 

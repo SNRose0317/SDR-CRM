@@ -283,15 +283,51 @@ export const config = {
 4. **Maintainability**: Centralized configuration management
 5. **Flexibility**: Easy to adjust settings without code changes
 
-## When to Use
+## When We Would Need This
 
-Create configuration for:
-- Environment-specific settings
-- Feature flags and toggles
-- Third-party service credentials
-- Business rule parameters
-- Performance tuning parameters
-- Security settings
+We would create configuration files when:
+
+### Current State (Why we haven't needed them yet)
+- **Simple Environment**: Currently using basic environment variables (DATABASE_URL, etc.)
+- **No Feature Flags**: All features are enabled by default
+- **No External Services**: Haven't integrated with email, SMS, calendar, or other external APIs
+- **Basic Settings**: Simple hardcoded values work for current functionality
+
+### Future Triggers (When we would create configs)
+1. **External Service Integration**: When we integrate with SendGrid (email), Twilio (SMS), Google Calendar, or EHR systems
+2. **Environment Complexity**: When we need different settings for development, staging, and production
+3. **Feature Flags**: When we want to enable/disable features like portal access, automation, or specific workflows
+4. **Business Rules**: When we implement configurable business hours, appointment durations, reminder schedules
+5. **Performance Tuning**: When we need to configure database connection pools, caching, or rate limiting
+6. **Security Requirements**: When we implement HIPAA compliance settings, encryption configurations, or access control rules
+
+### Example: When Integration Gets Complex
+```typescript
+// Currently: Simple environment variables
+const databaseUrl = process.env.DATABASE_URL;
+
+// Would become: Complex configuration when we add services
+const config = {
+  email: {
+    provider: 'sendgrid',
+    apiKey: process.env.SENDGRID_API_KEY,
+    templates: {
+      welcome: 'welcome_template_id',
+      appointment_reminder: 'reminder_template_id'
+    }
+  },
+  sms: {
+    provider: 'twilio',
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN
+  },
+  scheduling: {
+    businessHours: { start: 9, end: 17 },
+    appointmentDuration: 30,
+    reminderTimes: [24, 2, 0.5]
+  }
+};
+```
 
 ## Best Practices
 

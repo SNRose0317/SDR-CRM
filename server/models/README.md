@@ -189,15 +189,43 @@ async getLeadsOlderThan(hours: number) {
 4. **Maintainability**: Database logic separated from business logic
 5. **Testability**: Models can be unit tested independently
 
-## When to Use
+## When We Would Need This
 
-Create models for:
-- Complex database queries
-- Multi-table joins
-- Aggregations and analytics
-- Performance-critical operations
-- Reusable query patterns
-- Data validation and transformation
+We would create model files when:
+
+### Current State (Why we haven't needed them yet)
+- **Simple Queries**: Most database operations are basic CRUD through the storage layer
+- **Storage Abstraction**: The `storage.ts` file handles most database complexity
+- **Small Dataset**: Current data volume doesn't require query optimization
+- **Basic Relationships**: Simple joins are handled directly in storage methods
+
+### Future Triggers (When we would create models)
+1. **Complex Analytics**: When we need sophisticated reporting queries like conversion funnels, patient journey analytics, or provider performance metrics
+2. **Performance Optimization**: When query performance becomes critical due to data volume or complexity
+3. **Advanced Filtering**: When we implement complex lead/contact filtering with multiple criteria, date ranges, and cross-table searches
+4. **Data Relationships**: When we need complex joins across multiple tables for features like care team assignments or patient history
+5. **Aggregation Queries**: When we build dashboard analytics with complex grouping and calculations
+6. **Search Functionality**: When we implement full-text search across patient records or lead data
+
+### Example: When Analytics Gets Complex
+```typescript
+// Currently: Simple stats in storage
+async getLeadStats() {
+  return await db.select({
+    status: leads.status,
+    count: count()
+  }).from(leads).groupBy(leads.status);
+}
+
+// Would become: LeadModel when we need advanced analytics
+class LeadModel {
+  async getConversionFunnel(dateRange: DateRange) {
+    // Complex multi-table query with CTEs, window functions
+    // Performance-optimized with proper indexes
+    // Reusable across multiple controllers
+  }
+}
+```
 
 ## Best Practices
 

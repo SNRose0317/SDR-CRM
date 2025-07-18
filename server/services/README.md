@@ -124,15 +124,41 @@ export class LeadService {
 4. **Maintainability**: Changes to business logic centralized
 5. **Scalability**: Easy to add new business features
 
-## When to Use
+## When We Would Need This
 
-Create services for:
-- Complex business calculations
-- External API integrations
-- Cross-cutting concerns (logging, caching, etc.)
-- Multi-step workflows
-- Data transformation and validation
-- Background job processing
+We would create service files when:
+
+### Current State (Why we haven't needed them yet)
+- **Simple Business Logic**: Current operations are straightforward CRUD with basic validation
+- **No External Integrations**: We're not yet integrating with EHR systems, email services, or calendar APIs
+- **Basic Automation**: The automation system handles simple triggers but doesn't need complex business calculations
+- **Storage Layer Sufficiency**: The `storage.ts` interface handles most data operations
+
+### Future Triggers (When we would create services)
+1. **Lead Scoring Algorithm**: When we implement sophisticated lead qualification based on health questionnaire responses, demographics, and behavioral data
+2. **Email/SMS Notifications**: When we integrate with SendGrid, Twilio, or similar services for automated communications
+3. **Calendar Integration**: When we sync with Google Calendar, Outlook, or other scheduling systems
+4. **Health Data Processing**: When we need to calculate BMI, risk scores, care plan recommendations
+5. **Insurance Verification**: When we integrate with insurance APIs to verify coverage and benefits
+6. **Automated Reminders**: When we implement complex reminder logic with multiple channels and escalation
+
+### Example: When Notification Gets Complex
+```typescript
+// Currently: Simple in-app notifications
+await db.insert(activityLogs).values({
+  entityType: 'lead',
+  action: 'created',
+  details: 'Lead created'
+});
+
+// Would become: NotificationService when we add multi-channel
+await notificationService.sendWelcomeSequence({
+  leadId: lead.id,
+  channels: ['email', 'sms'],
+  schedule: 'immediate',
+  template: 'health_welcome'
+});
+```
 
 ## Service Dependencies
 
