@@ -293,7 +293,7 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(tasks.status, filters.status));
     }
     if (filters?.assignedTo) {
-      conditions.push(eq(tasks.assignedTo, filters.assignedTo));
+      conditions.push(eq(tasks.assignedToId, filters.assignedTo));
     }
     if (filters?.priority) {
       conditions.push(eq(tasks.priority, filters.priority));
@@ -328,7 +328,7 @@ export class DatabaseStorage implements IStorage {
       entityId: result[0].id,
       action: 'created',
       details: `Task "${result[0].title}" created`,
-      userId: taskData.assignedTo
+      userId: taskData.assignedToId
     });
     
     return result[0];
@@ -354,7 +354,7 @@ export class DatabaseStorage implements IStorage {
       entityId: id,
       action: 'updated',
       details: `Task updated`,
-      userId: taskData.assignedTo || null
+      userId: taskData.assignedToId || null
     });
     
     return result[0];

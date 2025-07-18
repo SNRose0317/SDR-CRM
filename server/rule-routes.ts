@@ -5,6 +5,20 @@ import type { RuleConfig } from "@shared/rule-schema";
 
 const router = Router();
 
+// Enhanced validation schema for compound conditions
+const simpleConditionSchema = z.object({
+  field: z.string().min(1, "Field is required"),
+  operator: z.enum(['>', '<', '=', '!=', 'contains', 'starts_with', 'ends_with', 'in', 'between', 'is_empty', 'is_not_empty']),
+  value: z.any(),
+});
+
+const compoundConditionSchema: z.ZodSchema<any> = z.lazy(() => z.object({
+  logic: z.enum(['AND', 'OR']),
+  conditions: z.array(z.union([simpleConditionSchema, compoundConditionSchema])),
+}));
+
+const conditionSchema = z.union([simpleConditionSchema, compoundConditionSchema]);
+
 // Rule configuration validation schema
 const ruleConfigSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -12,11 +26,7 @@ const ruleConfigSchema = z.object({
   subject: z.object({
     type: z.enum(['lead', 'contact', 'task', 'appointment']),
   }),
-  condition: z.object({
-    field: z.string().min(1, "Field is required"),
-    operator: z.enum(['>', '<', '=', '!=', 'contains', 'in', 'between']),
-    value: z.any(),
-  }),
+  condition: conditionSchema,
   action: z.object({
     type: z.enum(['grant_access', 'assign_entity', 'trigger_workflow', 'send_notification']),
     target: z.object({
