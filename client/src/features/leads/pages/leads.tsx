@@ -8,12 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu";
 import DataTable from "@/shared/components/data-display/data-table";
 import LeadForm from "@/features/leads/components/lead-form";
-import { Plus, Edit, Trash2, Eye, MoreHorizontal } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead } from "@shared/schema";
 import type { FilterOptions } from "@/lib/types";
 import EntityAssignment from "@/features/leads/components/lead-claiming";
+import { HHQForm } from "@/features/hhq/components";
 
 const statusColors = {
   "HHQ Started": "bg-amber-500/20 text-amber-500",
@@ -27,6 +28,8 @@ export default function Leads() {
   const [filters, setFilters] = useState<FilterOptions>({});
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isHHQOpen, setIsHHQOpen] = useState(false);
+  const [hhqLead, setHhqLead] = useState<Lead | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -95,6 +98,17 @@ export default function Leads() {
   const handleFormClose = () => {
     setSelectedLead(null);
     setIsFormOpen(false);
+  };
+
+  const handleStartHHQ = (lead: Lead) => {
+    setHhqLead(lead);
+    setIsHHQOpen(true);
+  };
+
+  const handleHHQClose = () => {
+    setHhqLead(null);
+    setIsHHQOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
   };
 
   const columns = [
@@ -172,6 +186,10 @@ export default function Leads() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleStartHHQ(row)}>
+              <FileText className="w-4 h-4 mr-2" />
+              Start HHQ
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleEdit(row)}>
               <Edit className="w-4 h-4 mr-2" />
               Edit
@@ -266,6 +284,21 @@ export default function Leads() {
         onFilter={setFilters}
         filters={filterComponents}
       />
+
+      {/* HHQ Dialog */}
+      <Dialog open={isHHQOpen} onOpenChange={setIsHHQOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Health History Questionnaire</DialogTitle>
+          </DialogHeader>
+          {hhqLead && (
+            <HHQForm
+              lead={hhqLead}
+              onComplete={handleHHQClose}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

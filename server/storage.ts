@@ -5,6 +5,7 @@ import {
   tasks,
   appointments,
   activityLogs,
+  healthQuestionnaires,
   type User,
   type InsertUser,
   type Lead,
@@ -16,7 +17,9 @@ import {
   type Appointment,
   type InsertAppointment,
   type ActivityLog,
-  type InsertActivityLog
+  type InsertActivityLog,
+  type HealthQuestionnaire,
+  type InsertHealthQuestionnaire
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, count, sql, isNull } from "drizzle-orm";
@@ -74,6 +77,13 @@ export interface IStorage {
   
   // Stats operations
   getDashboardStats(): Promise<any>;
+
+  // Health History Questionnaire operations
+  getHealthQuestionnaire(leadId: number): Promise<HealthQuestionnaire | undefined>;
+  createHealthQuestionnaire(data: InsertHealthQuestionnaire): Promise<HealthQuestionnaire>;
+  signHealthQuestionnaire(questionnaireId: number): Promise<HealthQuestionnaire>;
+  markAsPaid(questionnaireId: number, amount: number): Promise<HealthQuestionnaire>;
+  bookAppointment(questionnaireId: number, appointmentId: number): Promise<HealthQuestionnaire>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -626,6 +636,120 @@ export class DatabaseStorage implements IStorage {
       const canClaim = canUserClaimEntity(userRole, entityType, entity.ownerId, entity.createdAt, DEFAULT_PERMISSIONS);
       return canClaim.canClaim;
     });
+  }
+
+  // Health History Questionnaire operations
+  async getHealthQuestionnaire(leadId: number): Promise<HealthQuestionnaire | undefined> {
+    const result = await db.select()
+      .from(healthQuestionnaires)
+      .where(eq(healthQuestionnaires.leadId, leadId));
+    return result[0] || undefined;
+  }
+
+  async createHealthQuestionnaire(data: InsertHealthQuestionnaire): Promise<HealthQuestionnaire> {
+    const result = await db.insert(healthQuestionnaires).values(data).returning();
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: data.leadId,
+      action: 'hhq_created',
+      details: `Health History Questionnaire created`,
+      userId: null
+    });
+    
+    return result[0];
+  }
+
+  async signHealthQuestionnaire(questionnaireId: number): Promise<HealthQuestionnaire> {
+    const result = await db
+      .update(healthQuestionnaires)
+      .set({
+        isSigned: true,
+        signedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(healthQuestionnaires.id, questionnaireId))
+      .returning();
+    
+    const hhq = result[0];
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: hhq.leadId,
+      action: 'hhq_signed',
+      details: `Health History Questionnaire signed`,
+      userId: null
+    });
+    
+    // Update lead status when HHQ is signed
+    await this.updateLead(hhq.leadId, {
+      status: 'HHQ Signed'
+    });
+    
+    return hhq;
+  }
+
+  async markAsPaid(questionnaireId: number, amount: number): Promise<HealthQuestionnaire> {
+    const result = await db
+      .update(healthQuestionnaires)
+      .set({
+        isPaid: true,
+        paidAt: new Date(),
+        paymentAmount: amount.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(healthQuestionnaires.id, questionnaireId))
+      .returning();
+    
+    const hhq = result[0];
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: hhq.leadId,
+      action: 'hhq_paid',
+      details: `Payment of $${amount} processed`,
+      userId: null
+    });
+    
+    // Update lead status when payment is made
+    await this.updateLead(hhq.leadId, {
+      status: 'Booking: Needs Scheduling'
+    });
+    
+    return hhq;
+  }
+
+  async bookAppointment(questionnaireId: number, appointmentId: number): Promise<HealthQuestionnaire> {
+    const result = await db
+      .update(healthQuestionnaires)
+      .set({
+        appointmentBooked: true,
+        appointmentId: appointmentId,
+        updatedAt: new Date()
+      })
+      .where(eq(healthQuestionnaires.id, questionnaireId))
+      .returning();
+    
+    const hhq = result[0];
+    
+    // Log activity
+    await this.createActivityLog({
+      entityType: 'lead',
+      entityId: hhq.leadId,
+      action: 'hhq_appointment_booked',
+      details: `Appointment booked`,
+      userId: null
+    });
+    
+    // Update lead status when appointment is booked
+    await this.updateLead(hhq.leadId, {
+      status: 'Booking: Paid/ booked'
+    });
+    
+    return hhq;
   }
 }
 

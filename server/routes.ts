@@ -10,7 +10,8 @@ import {
   taskRoutes,
   appointmentRoutes,
   portalRoutes,
-  ruleRoutes
+  ruleRoutes,
+  hhqRoutes
 } from "./routes/index";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -23,6 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/appointments", appointmentRoutes);
   app.use("/api/portal", portalRoutes);
   app.use("/api/rules", ruleRoutes);
+  app.use("/api/hhq", hhqRoutes);
 
   // Activity logs endpoint (dashboard-related)
   app.get("/api/activity-logs", async (req, res) => {

@@ -9,6 +9,7 @@ import {
   jsonb,
   index,
   pgEnum,
+  decimal,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -191,6 +192,35 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
   contact: one(contacts, {
     fields: [appointments.contactId],
     references: [contacts.id],
+  }),
+}));
+
+// Health History Questionnaire table
+export const healthQuestionnaires = pgTable("health_questionnaires", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  energyLevel: integer("energy_level").notNull(), // 1-10 scale
+  libidoLevel: integer("libido_level").notNull(), // 1-10 scale
+  overallHealth: integer("overall_health").notNull(), // 1-10 scale
+  isSigned: boolean("is_signed").default(false).notNull(),
+  signedAt: timestamp("signed_at"),
+  isPaid: boolean("is_paid").default(false).notNull(),
+  paidAt: timestamp("paid_at"),
+  paymentAmount: decimal("payment_amount", { precision: 10, scale: 2 }),
+  appointmentBooked: boolean("appointment_booked").default(false).notNull(),
+  appointmentId: integer("appointment_id").references(() => appointments.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const healthQuestionnairesRelations = relations(healthQuestionnaires, ({ one }) => ({
+  lead: one(leads, {
+    fields: [healthQuestionnaires.leadId],
+    references: [leads.id],
+  }),
+  appointment: one(appointments, {
+    fields: [healthQuestionnaires.appointmentId],
+    references: [appointments.id],
   }),
 }));
 
@@ -444,6 +474,19 @@ export const insertPortalNotificationSchema = createInsertSchema(portalNotificat
   createdAt: true,
 });
 
+export const insertHealthQuestionnaireSchema = createInsertSchema(healthQuestionnaires).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  signedAt: true,
+  paidAt: true,
+  appointmentId: true,
+}).extend({
+  energyLevel: z.number().min(1).max(10),
+  libidoLevel: z.number().min(1).max(10),
+  overallHealth: z.number().min(1).max(10),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -468,6 +511,8 @@ export type PermissionRule = typeof permissionRules.$inferSelect;
 export type InsertPermissionRule = typeof permissionRules.$inferInsert;
 export type RuleEvaluation = typeof ruleEvaluations.$inferSelect;
 export type RuleAuditLog = typeof ruleAuditLog.$inferSelect;
+export type HealthQuestionnaire = typeof healthQuestionnaires.$inferSelect;
+export type InsertHealthQuestionnaire = z.infer<typeof insertHealthQuestionnaireSchema>;
 
 // Signup schema for portal registration
 export const signupSchema = z.object({
