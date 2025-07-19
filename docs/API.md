@@ -39,11 +39,15 @@ Error responses:
 
 ### Leads
 - `GET /api/leads` - Get all leads (with filters)
+  - Query parameters: `status`, `leadSource`, `ownerId`, `healthCoachBookedWith`, `search`
+- `GET /api/leads/my-leads/:userId` - Get leads assigned to specific user
+- `GET /api/leads/open-leads/:userId` - Get unassigned leads available to user
 - `GET /api/leads/stats` - Get lead statistics by status
 - `GET /api/leads/:id` - Get lead by ID
 - `POST /api/leads` - Create new lead
 - `PUT /api/leads/:id` - Update lead
 - `DELETE /api/leads/:id` - Delete lead
+- `POST /api/leads/:id/assign` - Assign lead to user
 
 ### Contacts
 - `GET /api/contacts` - Get all contacts (with filters)
@@ -96,8 +100,18 @@ Error responses:
   email: string;
   phone?: string;
   status: "HHQ Started" | "HHQ Signed" | "Booking: Not Paid" | "Booking: Paid/Not Booked" | "Booking: Paid/Booked";
+  leadSource: "HHQ Complete" | "HHQ Started" | "Lab Purchase" | "Marek Health Discovery Call" | "Newsletter Discovery Call" | "Social Media Discovery Call" | "Newsletter" | "None";
+  leadReadiness: "Cold" | "Warm" | "Hot" | "Follow Up";
+  leadOutcome?: string;
+  leadType?: string;
+  numberOfCalls: number;
+  lastContacted?: Date;
   ownerId?: number;
+  healthCoachBookedWith?: number;
   notes?: string;
+  passwordHash?: string;
+  portalAccess: boolean;
+  lastPortalLogin?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

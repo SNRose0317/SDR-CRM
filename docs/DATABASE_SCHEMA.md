@@ -46,10 +46,32 @@ CREATE TABLE leads (
     'Booking: Paid/Not Booked',
     'Booking: Paid/Booked'
   )),
+  lead_source lead_source DEFAULT 'None',
+  lead_readiness VARCHAR DEFAULT 'Cold' CHECK (lead_readiness IN ('Cold', 'Warm', 'Hot', 'Follow Up')),
+  lead_outcome VARCHAR,
+  lead_type VARCHAR,
+  number_of_calls INTEGER DEFAULT 0,
+  last_contacted TIMESTAMP,
   owner_id INTEGER REFERENCES users(id),
+  health_coach_booked_with INTEGER REFERENCES users(id),
   notes TEXT,
+  password_hash VARCHAR,
+  portal_access BOOLEAN DEFAULT false,
+  last_portal_login TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Lead source enum for marketing attribution
+CREATE TYPE lead_source AS ENUM (
+  'HHQ Complete',
+  'HHQ Started', 
+  'Lab Purchase',
+  'Marek Health Discovery Call',
+  'Newsletter Discovery Call',
+  'Social Media Discovery Call',
+  'Newsletter',
+  'None'
 );
 ```
 

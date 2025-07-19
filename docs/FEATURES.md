@@ -21,6 +21,10 @@ HealthCRM is designed to manage the complete healthcare patient journey from lea
 - Assignment to SDR representatives
 - Conversion tracking to contacts
 - Communication history
+- Marketing channel attribution tracking
+- Lead source filtering and analytics
+- Call logging with detailed session tracking
+- Lead profile access from multiple touchpoints
 
 ### 2. Contact Management System
 **Purpose**: Manage active patients through their healthcare journey
@@ -103,6 +107,45 @@ HealthCRM is designed to manage the complete healthcare patient journey from lea
 
 **Key Metrics**:
 - Lead conversion rates by stage
+- Lead source attribution and ROI tracking
+- Call activity and engagement metrics
+- Pipeline velocity by marketing channel
+
+### 7. Marketing Attribution System
+**Purpose**: Track lead sources and measure marketing channel effectiveness
+
+**Supported Marketing Channels**:
+- **HHQ Complete** - Leads from completed health questionnaires
+- **HHQ Started** - Leads from initiated questionnaires  
+- **Lab Purchase** - Leads from laboratory test purchases
+- **Marek Health Discovery Call** - Leads from discovery call campaigns
+- **Newsletter Discovery Call** - Leads from newsletter-driven calls
+- **Social Media Discovery Call** - Leads from social media campaigns
+- **Newsletter** - Direct newsletter subscribers
+- **None** - Unknown or untracked sources
+
+**Key Features**:
+- Lead source dropdown in creation forms
+- Marketing channel filtering in leads table
+- ROI tracking by channel
+- Attribution reporting for campaign optimization
+
+### 8. Call Management System
+**Purpose**: Track all communication activities with leads and contacts
+
+**Features**:
+- Detailed call session logging
+- Call outcome tracking (Connected, Voicemail, No Answer, etc.)
+- Call duration and notes recording
+- Multi-lead phone dialer
+- Call history timeline in lead profiles
+- Automatic call count calculation
+
+**Access Points**:
+- Clickable lead names for instant profile access
+- Dedicated "View Profile" button in phone dialer
+- Actions menu "View Profile" option
+- Complete call history with team member tracking
 - Contact progression through healthcare journey
 - Task completion rates
 - Appointment scheduling efficiency
