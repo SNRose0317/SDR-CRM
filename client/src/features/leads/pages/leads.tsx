@@ -279,7 +279,12 @@ export default function Leads() {
             </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium">{row.firstName} {row.lastName}</div>
+            <button
+              onClick={() => handleViewProfile(row)}
+              className="font-medium text-left hover:text-primary cursor-pointer transition-colors"
+            >
+              {row.firstName} {row.lastName}
+            </button>
             <div className="text-sm text-muted-foreground">ID: LD-{row.id}</div>
           </div>
         </div>
@@ -622,6 +627,7 @@ export default function Leads() {
         onClose={() => setIsDialerOpen(false)}
         leads={selectedLeads}
         currentUser={currentUser}
+        onViewProfile={handleViewProfile}
       />
 
       {/* Lead Profile Dialog */}

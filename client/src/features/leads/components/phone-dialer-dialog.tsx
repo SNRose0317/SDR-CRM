@@ -34,7 +34,8 @@ import {
   MapPin,
   MessageSquare,
   Calendar,
-  Target
+  Target,
+  Eye
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -62,6 +63,7 @@ interface PhoneDialerDialogProps {
   onClose: () => void;
   leads: Lead[];
   currentUser?: any;
+  onViewProfile?: (lead: Lead) => void;
 }
 
 const readinessColors = {
@@ -75,7 +77,8 @@ export function PhoneDialerDialog({
   isOpen, 
   onClose, 
   leads: initialLeads, 
-  currentUser 
+  currentUser,
+  onViewProfile
 }: PhoneDialerDialogProps) {
   const [leads, setLeads] = useState<Lead[]>(initialLeads || []);
   
@@ -281,12 +284,25 @@ export function PhoneDialerDialog({
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  {currentLead.firstName} {currentLead.lastName}
-                  <Badge className={readinessColors[currentLead.leadReadiness as keyof typeof readinessColors]}>
-                    {currentLead.leadReadiness}
-                  </Badge>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    {currentLead.firstName} {currentLead.lastName}
+                    <Badge className={readinessColors[currentLead.leadReadiness as keyof typeof readinessColors]}>
+                      {currentLead.leadReadiness}
+                    </Badge>
+                  </div>
+                  {onViewProfile && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => onViewProfile(currentLead)}
+                      className="flex items-center gap-1"
+                    >
+                      <Eye className="h-3 w-3" />
+                      View Profile
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
