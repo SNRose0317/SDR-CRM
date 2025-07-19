@@ -11,6 +11,7 @@ import { Checkbox } from "@/shared/components/ui/checkbox";
 import DataTable from "@/shared/components/data-display/data-table";
 import LeadForm from "@/features/leads/components/lead-form";
 import { PhoneDialerDialog } from "@/features/leads/components/phone-dialer-dialog";
+import { LeadProfileDialog } from "@/features/leads/components/lead-profile-dialog";
 import { Plus, Edit, Trash2, Eye, MoreHorizontal, FileText, UserPlus, Phone, PhoneCall } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,8 @@ export default function Leads() {
   const [isDialerOpen, setIsDialerOpen] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileLead, setProfileLead] = useState<Lead | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -86,6 +89,29 @@ export default function Leads() {
   // Get the current leads based on active tab
   const leads = activeTab === "my-leads" ? myLeads : openLeads;
   const isLoading = activeTab === "my-leads" ? isMyLeadsLoading : isOpenLeadsLoading;
+
+  // Get call counts for current leads
+  const { data: callCounts } = useQuery({
+    queryKey: ["/api/call-sessions/counts", leads?.map(l => l.id)],
+    queryFn: async () => {
+      if (!leads || leads.length === 0) return {};
+      const counts: Record<number, number> = {};
+      
+      // Fetch call counts for each lead
+      await Promise.all(leads.map(async (lead) => {
+        const response = await fetch(`/api/call-sessions?leadId=${lead.id}`);
+        if (response.ok) {
+          const sessions = await response.json();
+          counts[lead.id] = sessions.length;
+        } else {
+          counts[lead.id] = 0;
+        }
+      }));
+      
+      return counts;
+    },
+    enabled: !!leads && leads.length > 0,
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -147,6 +173,16 @@ export default function Leads() {
   const handlePhoneClick = (lead: Lead) => {
     setSelectedLeads([lead]);
     setIsDialerOpen(true);
+  };
+
+  const handleViewProfile = (lead: Lead) => {
+    setProfileLead(lead);
+    setIsProfileOpen(true);
+  };
+
+  const handleProfileClose = () => {
+    setProfileLead(null);
+    setIsProfileOpen(false);
   };
 
   const handleEdit = (lead: Lead) => {
@@ -291,11 +327,14 @@ export default function Leads() {
       key: "numberOfCalls",
       label: "# of Calls",
       sortable: true,
-      render: (value: number) => (
-        <div className="text-center">
-          <span className="font-mono">{value || 0}</span>
-        </div>
-      ),
+      render: (_: any, row: Lead) => {
+        const count = callCounts?.[row.id] ?? 0;
+        return (
+          <div className="text-center">
+            <span className="font-mono">{count}</span>
+          </div>
+        );
+      },
     },
     {
       key: "leadReadiness",
@@ -399,9 +438,9 @@ export default function Leads() {
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleViewProfile(row)}>
                 <Eye className="w-4 h-4 mr-2" />
-                View
+                View Profile
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => handleDelete(row.id)}
@@ -583,6 +622,13 @@ export default function Leads() {
         onClose={() => setIsDialerOpen(false)}
         leads={selectedLeads}
         currentUser={currentUser}
+      />
+
+      {/* Lead Profile Dialog */}
+      <LeadProfileDialog
+        isOpen={isProfileOpen}
+        onClose={handleProfileClose}
+        lead={profileLead}
       />
     </div>
   );

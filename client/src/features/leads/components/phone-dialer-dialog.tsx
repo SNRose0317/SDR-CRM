@@ -158,9 +158,8 @@ export function PhoneDialerDialog({
         })
       });
 
-      // Update lead with call count and outcome
+      // Update lead with outcome and last contacted
       const updateData: any = {
-        numberOfCalls: currentLead.numberOfCalls + 1,
         lastContacted: endTime.toISOString()
       };
       
@@ -178,7 +177,6 @@ export function PhoneDialerDialog({
         lead.id === currentLead.id 
           ? { 
               ...lead, 
-              numberOfCalls: currentLead.numberOfCalls + 1, 
               lastContacted: endTime.toISOString(),
               ...(callOutcome && { leadOutcome: callOutcome })
             }
@@ -315,7 +313,7 @@ export function PhoneDialerDialog({
                   </div>
                   <div className="flex items-center gap-2">
                     <PhoneCall className="h-4 w-4 text-muted-foreground" />
-                    <span>Calls: {currentLead.numberOfCalls}</span>
+                    <span>View call history in lead profile</span>
                   </div>
                 </div>
 
@@ -450,7 +448,7 @@ export function PhoneDialerDialog({
                             {lead.leadReadiness}
                           </Badge>
                           <div className="text-xs text-muted-foreground">
-                            {lead.numberOfCalls} calls
+                            Ready to call
                           </div>
                         </div>
                       </div>

@@ -1226,13 +1226,33 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(callSessions.userId, userId));
     }
     
+    const query = db
+      .select({
+        id: callSessions.id,
+        leadId: callSessions.leadId,
+        userId: callSessions.userId,
+        startTime: callSessions.startTime,
+        endTime: callSessions.endTime,
+        duration: callSessions.duration,
+        callOutcome: callSessions.callOutcome,
+        notes: callSessions.notes,
+        nextAction: callSessions.nextAction,
+        createdAt: callSessions.createdAt,
+        user: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName
+        }
+      })
+      .from(callSessions)
+      .leftJoin(users, eq(callSessions.userId, users.id))
+      .orderBy(desc(callSessions.startTime));
+    
     if (conditions.length > 0) {
-      return await db.select().from(callSessions)
-        .where(and(...conditions))
-        .orderBy(desc(callSessions.startTime));
+      return await query.where(and(...conditions));
     }
     
-    return await db.select().from(callSessions).orderBy(desc(callSessions.startTime));
+    return await query;
   }
   
   // Dialer queue operations
