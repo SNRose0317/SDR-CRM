@@ -113,13 +113,13 @@ export function PhoneDialerDialog({
   // Auto-dialer logic
   useEffect(() => {
     let timeout: NodeJS.Timeout;
-    if (autoDialerEnabled && !isDialing && callDisposition && currentIndex < leads.length - 1) {
+    if (autoDialerEnabled && !isDialing && callOutcome && currentIndex < leads.length - 1) {
       timeout = setTimeout(() => {
         handleNextLead();
       }, autoDialerDelay * 1000);
     }
     return () => clearTimeout(timeout);
-  }, [autoDialerEnabled, isDialing, callDisposition, currentIndex, autoDialerDelay, leads.length]);
+  }, [autoDialerEnabled, isDialing, callOutcome, currentIndex, autoDialerDelay, leads.length]);
 
   const handleStartCall = async () => {
     if (!currentLead) return;
