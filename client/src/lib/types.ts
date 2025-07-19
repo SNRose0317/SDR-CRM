@@ -32,4 +32,5 @@ export interface FilterOptions {
   date?: string;
   role?: string;
   isActive?: boolean;
+  leadSource?: string;
 }

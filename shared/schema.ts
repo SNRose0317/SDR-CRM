@@ -54,6 +54,16 @@ export const leadOutcomeEnum = pgEnum("lead_outcome", [
 ]);
 export const callDispositionEnum = pgEnum("call_disposition", ["connected", "voicemail", "busy", "no_answer", "callback", "not_interested", "qualified", "follow_up"]);
 export const dialerStatusEnum = pgEnum("dialer_status", ["active", "paused", "completed"]);
+export const leadSourceEnum = pgEnum("lead_source", [
+  "HHQ Complete",
+  "HHQ Started", 
+  "Lab Purchase",
+  "Marek Health Discovery Call",
+  "Newsletter Discovery Call",
+  "Social Media Discovery Call",
+  "Newsletter",
+  "None"
+]);
 
 // Session storage table (required for auth)
 export const sessions = pgTable(
@@ -103,7 +113,7 @@ export const persons = pgTable("persons", {
   // Lead-specific fields
   leadStatus: leadStatusEnum("lead_status").default("New"),
   leadOutcome: leadOutcomeEnum("lead_outcome"),
-  source: varchar("source"),
+  source: leadSourceEnum("source").default("None"),
   leadScore: integer("lead_score").default(0),
   
   // Contact-specific fields
@@ -162,7 +172,7 @@ export const leads = pgTable("leads", {
   leadOutcome: leadOutcomeEnum("lead_outcome"),
   numberOfCalls: integer("number_of_calls").default(0),
   leadType: varchar("lead_type"),
-  leadSource: varchar("lead_source"),
+  leadSource: leadSourceEnum("lead_source").default("None"),
   leadReadiness: leadReadinessEnum("lead_readiness").default("Cold"),
   
   passwordHash: varchar("password_hash"),

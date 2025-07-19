@@ -495,6 +495,25 @@ export default function Leads() {
           ))}
         </SelectContent>
       </Select>
+      <Select
+        value={filters.leadSource || ""}
+        onValueChange={(value) => setFilters({ ...filters, leadSource: value || undefined })}
+      >
+        <SelectTrigger className="w-56">
+          <SelectValue placeholder="All Lead Sources" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Lead Sources</SelectItem>
+          <SelectItem value="HHQ Complete">HHQ Complete</SelectItem>
+          <SelectItem value="HHQ Started">HHQ Started</SelectItem>
+          <SelectItem value="Lab Purchase">Lab Purchase</SelectItem>
+          <SelectItem value="Marek Health Discovery Call">Marek Health Discovery Call</SelectItem>
+          <SelectItem value="Newsletter Discovery Call">Newsletter Discovery Call</SelectItem>
+          <SelectItem value="Social Media Discovery Call">Social Media Discovery Call</SelectItem>
+          <SelectItem value="Newsletter">Newsletter</SelectItem>
+          <SelectItem value="None">None</SelectItem>
+        </SelectContent>
+      </Select>
     </>
   );
 

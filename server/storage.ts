@@ -163,6 +163,9 @@ export class DatabaseStorage implements IStorage {
     if (filters?.healthCoachBookedWith) {
       conditions.push(eq(leads.healthCoachBookedWith, filters.healthCoachBookedWith));
     }
+    if (filters?.leadSource) {
+      conditions.push(eq(leads.leadSource, filters.leadSource));
+    }
     if (filters?.search) {
       conditions.push(
         or(

@@ -218,9 +218,23 @@ export default function LeadForm({ lead, onSuccess, onCancel }: LeadFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Lead Source</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Website, Social Media, Partner" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select lead source" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="HHQ Complete">HHQ Complete</SelectItem>
+                    <SelectItem value="HHQ Started">HHQ Started</SelectItem>
+                    <SelectItem value="Lab Purchase">Lab Purchase</SelectItem>
+                    <SelectItem value="Marek Health Discovery Call">Marek Health Discovery Call</SelectItem>
+                    <SelectItem value="Newsletter Discovery Call">Newsletter Discovery Call</SelectItem>
+                    <SelectItem value="Social Media Discovery Call">Social Media Discovery Call</SelectItem>
+                    <SelectItem value="Newsletter">Newsletter</SelectItem>
+                    <SelectItem value="None">None</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
