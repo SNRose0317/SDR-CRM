@@ -144,30 +144,9 @@ export default function Leads() {
     claimLeadMutation.mutate(leadId);
   };
 
-  const phoneCallMutation = useMutation({
-    mutationFn: async (leadId: number) => {
-      await apiRequest("PUT", `/api/leads/${leadId}/call`);
-    },
-    onSuccess: () => {
-      // Invalidate both tab queries to refresh the call count
-      queryClient.invalidateQueries({ queryKey: ["/api/leads/my-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/leads/open-leads"] });
-      toast({
-        title: "Call logged",
-        description: "Call count updated for this lead",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handlePhoneCall = (leadId: number) => {
-    phoneCallMutation.mutate(leadId);
+  const handlePhoneClick = (lead: Lead) => {
+    setSelectedLeads([lead]);
+    setIsDialerOpen(true);
   };
 
   const handleEdit = (lead: Lead) => {
@@ -364,10 +343,11 @@ export default function Leads() {
       label: "Phone",
       render: (value: string, row: Lead) => value ? (
         <button 
-          onClick={() => handlePhoneCall(row.id)}
-          className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-          title="Click to call and track call count"
+          onClick={() => handlePhoneClick(row)}
+          className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+          title="Click to open dialer"
         >
+          <Phone className="h-3 w-3" />
           {value}
         </button>
       ) : (

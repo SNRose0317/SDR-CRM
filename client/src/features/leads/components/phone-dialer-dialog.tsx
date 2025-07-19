@@ -130,30 +130,10 @@ export function PhoneDialerDialog({
     setCallNotes("");
     setCallOutcome("");
 
-    try {
-      // Track the call in database
-      await apiRequest(`/api/leads/${currentLead.id}/call`, {
-        method: "PUT"
-      });
-      
-      // Update local lead data
-      setLeads(prev => prev.map(lead => 
-        lead.id === currentLead.id 
-          ? { ...lead, numberOfCalls: lead.numberOfCalls + 1, lastContacted: new Date().toISOString() }
-          : lead
-      ));
-
-      toast({
-        title: "Call Started",
-        description: `Calling ${currentLead.firstName} ${currentLead.lastName}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start call tracking",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Call Started",
+      description: `Calling ${currentLead.firstName} ${currentLead.lastName}`,
+    });
   };
 
   const handleEndCall = async () => {
@@ -178,22 +158,32 @@ export function PhoneDialerDialog({
         })
       });
 
-      // Update lead outcome if one was selected
+      // Update lead with call count and outcome
+      const updateData: any = {
+        numberOfCalls: currentLead.numberOfCalls + 1,
+        lastContacted: endTime.toISOString()
+      };
+      
       if (callOutcome) {
-        await apiRequest(`/api/leads/${currentLead.id}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            leadOutcome: callOutcome
-          })
-        });
-        
-        // Update local lead data with the outcome
-        setLeads(prev => prev.map(lead => 
-          lead.id === currentLead.id 
-            ? { ...lead, leadOutcome: callOutcome }
-            : lead
-        ));
+        updateData.leadOutcome = callOutcome;
       }
+      
+      await apiRequest(`/api/leads/${currentLead.id}`, {
+        method: "PUT",
+        body: JSON.stringify(updateData)
+      });
+      
+      // Update local lead data
+      setLeads(prev => prev.map(lead => 
+        lead.id === currentLead.id 
+          ? { 
+              ...lead, 
+              numberOfCalls: currentLead.numberOfCalls + 1, 
+              lastContacted: endTime.toISOString(),
+              ...(callOutcome && { leadOutcome: callOutcome })
+            }
+          : lead
+      ));
 
       toast({
         title: "Call Completed",
