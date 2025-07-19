@@ -50,6 +50,12 @@ healthcrm/
 3. Start development server: `npm run dev`
 4. Push database schema: `npm run db:push`
 
+### External Deployment
+For deployment to external platforms like Supabase, AWS, or Vercel:
+- **Complete Database Setup**: [DATABASE_COMPLETE_SETUP.md](docs/DATABASE_COMPLETE_SETUP.md) - Ready-to-use SQL for any PostgreSQL instance
+- **External Deployment Guide**: [EXTERNAL_DEPLOYMENT_GUIDE.md](docs/EXTERNAL_DEPLOYMENT_GUIDE.md) - Step-by-step deployment instructions
+- **Environment Configuration**: [ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) - All required environment variables
+
 ### Key Features
 - **Lead Management**: 5-stage pipeline (HHQ Started → HHQ Signed → Booking stages → Conversion)
 - **Contact Management**: 15-stage healthcare workflow (Intake → Annual Process)

@@ -3,6 +3,17 @@
 ## Overview
 HealthCRM uses PostgreSQL with Drizzle ORM for type-safe database operations. The schema supports a comprehensive healthcare CRM workflow with lead management, patient care tracking, and task management.
 
+> **🚀 For External Deployment:** See [Complete Database Setup Guide](DATABASE_COMPLETE_SETUP.md) for ready-to-use SQL commands for Supabase, AWS RDS, or any PostgreSQL instance.
+
+## Quick External Setup
+If you're deploying to external services like Supabase or AWS:
+1. Copy all SQL from [DATABASE_COMPLETE_SETUP.md](DATABASE_COMPLETE_SETUP.md)
+2. Run in your PostgreSQL instance
+3. Set environment variables
+4. Deploy application
+
+All relationships, enums, and constraints are included for complete database recreation.
+
 ## Schema Structure
 
 ### Core Tables
