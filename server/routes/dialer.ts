@@ -13,9 +13,8 @@ router.post("/call-sessions", async (req, res) => {
       startTime: z.string().optional(),
       endTime: z.string().optional(),
       duration: z.number().optional(),
-      disposition: z.string().optional(),
+      callOutcome: z.string().optional(),
       notes: z.string().optional(),
-      outcome: z.string().optional(),
       nextAction: z.string().optional()
     });
 

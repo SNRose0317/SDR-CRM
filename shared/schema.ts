@@ -41,6 +41,17 @@ export const taskStatusEnum = pgEnum("task_status", ["todo", "in_progress", "com
 export const taskPriorityEnum = pgEnum("task_priority", ["low", "medium", "high", "urgent"]);
 export const appointmentStatusEnum = pgEnum("appointment_status", ["scheduled", "confirmed", "completed", "cancelled", "no_show"]);
 export const leadReadinessEnum = pgEnum("lead_readiness", ["Cold", "Warm", "Hot", "Follow Up"]);
+export const leadOutcomeEnum = pgEnum("lead_outcome", [
+  "Contacted - Intake Scheduled",
+  "Contacted - Follow-Up Scheduled", 
+  "Contacted - No Follow Up Scheduled",
+  "Contacted - No Longer Interested",
+  "Contacted - Do Not Call",
+  "Left Voicemail",
+  "No Answer", 
+  "Bad Number",
+  "Disqualified"
+]);
 export const callDispositionEnum = pgEnum("call_disposition", ["connected", "voicemail", "busy", "no_answer", "callback", "not_interested", "qualified", "follow_up"]);
 export const dialerStatusEnum = pgEnum("dialer_status", ["active", "paused", "completed"]);
 
@@ -91,6 +102,7 @@ export const persons = pgTable("persons", {
   
   // Lead-specific fields
   leadStatus: leadStatusEnum("lead_status").default("New"),
+  leadOutcome: leadOutcomeEnum("lead_outcome"),
   source: varchar("source"),
   leadScore: integer("lead_score").default(0),
   
@@ -147,7 +159,7 @@ export const leads = pgTable("leads", {
   
   // New lead tracking fields
   lastContacted: timestamp("last_contacted"),
-  leadOutcome: varchar("lead_outcome"),
+  leadOutcome: leadOutcomeEnum("lead_outcome"),
   numberOfCalls: integer("number_of_calls").default(0),
   leadType: varchar("lead_type"),
   leadSource: varchar("lead_source"),
@@ -485,9 +497,8 @@ export const callSessions = pgTable("call_sessions", {
   startTime: timestamp("start_time").defaultNow(),
   endTime: timestamp("end_time"),
   duration: integer("duration"), // Duration in seconds
-  disposition: callDispositionEnum("disposition"),
+  callOutcome: leadOutcomeEnum("call_outcome"), // Using lead outcome enum
   notes: text("notes"),
-  outcome: text("outcome"), // qualified, not_interested, follow_up, etc.
   nextAction: text("next_action"),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -91,7 +91,7 @@ export function PhoneDialerDialog({
   const [autoDialerDelay, setAutoDialerDelay] = useState(10);
   const [isDialing, setIsDialing] = useState(false);
   const [callNotes, setCallNotes] = useState("");
-  const [callDisposition, setCallDisposition] = useState("");
+  const [callOutcome, setCallOutcome] = useState("");
   const [callDuration, setCallDuration] = useState(0);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   const { toast } = useToast();
@@ -128,7 +128,7 @@ export function PhoneDialerDialog({
     setCallStartTime(new Date());
     setCallDuration(0);
     setCallNotes("");
-    setCallDisposition("");
+    setCallOutcome("");
 
     try {
       // Track the call in database
@@ -173,11 +173,27 @@ export function PhoneDialerDialog({
           startTime: callStartTime?.toISOString(),
           endTime: endTime.toISOString(),
           duration,
-          disposition: callDisposition,
-          notes: callNotes,
-          outcome: callDisposition
+          callOutcome: callOutcome,
+          notes: callNotes
         })
       });
+
+      // Update lead outcome if one was selected
+      if (callOutcome) {
+        await apiRequest(`/api/leads/${currentLead.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            leadOutcome: callOutcome
+          })
+        });
+        
+        // Update local lead data with the outcome
+        setLeads(prev => prev.map(lead => 
+          lead.id === currentLead.id 
+            ? { ...lead, leadOutcome: callOutcome }
+            : lead
+        ));
+      }
 
       toast({
         title: "Call Completed",
@@ -197,7 +213,7 @@ export function PhoneDialerDialog({
       setCurrentIndex(prev => prev + 1);
       setIsDialing(false);
       setCallNotes("");
-      setCallDisposition("");
+      setCallOutcome("");
       setCallDuration(0);
       setCallStartTime(null);
     }
@@ -370,22 +386,23 @@ export function PhoneDialerDialog({
                     </Button>
                   </div>
 
-                  {/* Call Disposition */}
+                  {/* Call Outcome */}
                   <div className="space-y-2">
-                    <Label>Call Disposition</Label>
-                    <Select value={callDisposition} onValueChange={setCallDisposition}>
+                    <Label>Call Outcome</Label>
+                    <Select value={callOutcome} onValueChange={setCallOutcome}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select disposition" />
+                        <SelectValue placeholder="Select outcome" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="connected">Connected</SelectItem>
-                        <SelectItem value="voicemail">Voicemail</SelectItem>
-                        <SelectItem value="busy">Busy</SelectItem>
-                        <SelectItem value="no_answer">No Answer</SelectItem>
-                        <SelectItem value="callback">Callback Requested</SelectItem>
-                        <SelectItem value="not_interested">Not Interested</SelectItem>
-                        <SelectItem value="qualified">Qualified</SelectItem>
-                        <SelectItem value="follow_up">Follow Up</SelectItem>
+                        <SelectItem value="Contacted - Intake Scheduled">Contacted - Intake Scheduled</SelectItem>
+                        <SelectItem value="Contacted - Follow-Up Scheduled">Contacted - Follow-Up Scheduled</SelectItem>
+                        <SelectItem value="Contacted - No Follow Up Scheduled">Contacted - No Follow Up Scheduled</SelectItem>
+                        <SelectItem value="Contacted - No Longer Interested">Contacted - No Longer Interested</SelectItem>
+                        <SelectItem value="Contacted - Do Not Call">Contacted - Do Not Call</SelectItem>
+                        <SelectItem value="Left Voicemail">Left Voicemail</SelectItem>
+                        <SelectItem value="No Answer">No Answer</SelectItem>
+                        <SelectItem value="Bad Number">Bad Number</SelectItem>
+                        <SelectItem value="Disqualified">Disqualified</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
