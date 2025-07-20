@@ -76,13 +76,47 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// RBAC Tables - defined before users table due to foreign key reference
+// Roles table - replaces hardcoded role enum
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  description: text("description"),
+  parentRoleId: integer("parent_role_id").references(() => roles.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Permissions table
+export const permissions = pgTable("permissions", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  resource: varchar("resource", { length: 100 }).notNull(),
+  action: varchar("action", { length: 50 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Role-Permission junction table
+export const rolePermissions = pgTable("role_permissions", {
+  roleId: integer("role_id").references(() => roles.id).notNull(),
+  permissionId: integer("permission_id").references(() => permissions.id).notNull(),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  grantedBy: integer("granted_by").references(() => users.id),
+}, (table) => ({
+  pk: index("role_permissions_pkey").on(table.roleId, table.permissionId),
+}));
+
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: varchar("email").unique().notNull(),
   firstName: varchar("first_name").notNull(),
   lastName: varchar("last_name").notNull(),
-  role: userRoleEnum("role").notNull().default("patient"),
+  role: userRoleEnum("role").notNull().default("patient"), // TODO: Remove after full RBAC migration
+  roleId: integer("role_id").references(() => roles.id), // New RBAC field
   passwordHash: varchar("password_hash"),
   profileImageUrl: varchar("profile_image_url"),
   portalAccess: boolean("portal_access").default(false),
@@ -91,12 +125,49 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
   assignedTasks: many(tasks),
   assignedContacts: many(contacts),
   activityLogs: many(activityLogs),
   portalSessions: many(portalSessions),
   assignedPersons: many(persons),
+  role: one(roles, {
+    fields: [users.roleId],
+    references: [roles.id]
+  })
+}));
+
+// Define relations for RBAC tables
+export const rolesRelations = relations(roles, ({ one, many }) => ({
+  parentRole: one(roles, {
+    fields: [roles.parentRoleId],
+    references: [roles.id],
+    relationName: "roleHierarchy"
+  }),
+  childRoles: many(roles, {
+    relationName: "roleHierarchy"
+  }),
+  users: many(users),
+  rolePermissions: many(rolePermissions)
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  rolePermissions: many(rolePermissions)
+}));
+
+export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
+  role: one(roles, {
+    fields: [rolePermissions.roleId],
+    references: [roles.id]
+  }),
+  permission: one(permissions, {
+    fields: [rolePermissions.permissionId],
+    references: [permissions.id]
+  }),
+  grantedByUser: one(users, {
+    fields: [rolePermissions.grantedBy],
+    references: [users.id]
+  })
 }));
 
 // Unified person table with persistent MH-1234 format
@@ -701,6 +772,30 @@ export const insertPersonSchema = createInsertSchema(persons).omit({
   createdAt: true,
   updatedAt: true,
 });
+
+// RBAC schemas
+export const insertRoleSchema = createInsertSchema(roles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPermissionSchema = createInsertSchema(permissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRolePermissionSchema = createInsertSchema(rolePermissions).omit({
+  grantedAt: true,
+});
+
+// RBAC types
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = z.infer<typeof insertRolePermissionSchema>;
 
 // Person types
 export type Person = typeof persons.$inferSelect;
